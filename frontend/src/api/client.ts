@@ -93,6 +93,13 @@ export const reservationsAPI = {
   }) => api.get('/reservations/check-availability', { params }),
 };
 
+// ─── Feedback (시스템 개선 의견) ─────────────────────────────
+export const feedbackAPI = {
+  list: (params?: { limit?: number; offset?: number }) =>
+    api.get('/feedback/', { params }),
+  create: (data: { content: string }) => api.post('/feedback/', data),
+};
+
 // ─── Dashboard ─────────────────────────────────────────────
 export const dashboardAPI = {
   timeline: (params: {

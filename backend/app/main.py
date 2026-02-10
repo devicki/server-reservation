@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.dashboard import router as dashboard_router
+from app.api.v1.feedback import router as feedback_router
 from app.api.v1.reservations import router as reservations_router
 from app.api.v1.resources import router as resources_router
 from app.config import get_settings
@@ -80,6 +81,7 @@ app.include_router(auth_router, prefix=API_V1_PREFIX)
 app.include_router(resources_router, prefix=API_V1_PREFIX)
 app.include_router(reservations_router, prefix=API_V1_PREFIX)
 app.include_router(dashboard_router, prefix=API_V1_PREFIX)
+app.include_router(feedback_router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health")

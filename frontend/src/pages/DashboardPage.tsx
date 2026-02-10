@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDates, setSelectedDates] = useState<{ start: string; end: string } | null>(null);
   const [selectedResource, setSelectedResource] = useState<string>('');
+  const dateRangeRef = useRef({ startStr: '', endStr: '' });
 
   const fetchResources = async () => {
     try {
@@ -101,7 +103,23 @@ export default function DashboardPage() {
   };
 
   const handleDatesSet = (dateInfo: any) => {
+    dateRangeRef.current = { startStr: dateInfo.startStr, endStr: dateInfo.endStr };
     fetchTimeline(dateInfo.startStr, dateInfo.endStr);
+  };
+
+  const handleEventClick = async (clickInfo: any) => {
+    if (user?.role !== 'admin') return;
+    const eventId = clickInfo.event.id;
+    const title = clickInfo.event.title || '이 일정';
+    if (!window.confirm(`"${title}" 일정을 삭제(취소)하시겠습니까?`)) return;
+    try {
+      await reservationsAPI.cancel(eventId);
+      const { startStr, endStr } = dateRangeRef.current;
+      if (startStr && endStr) fetchTimeline(startStr, endStr);
+    } catch (err) {
+      console.error('Failed to cancel reservation:', err);
+      alert('일정 삭제에 실패했습니다.');
+    }
   };
 
   const handleReservationCreated = () => {
@@ -118,8 +136,12 @@ export default function DashboardPage() {
           <h1>GPU Server Reservation</h1>
         </div>
         <div className="header-right">
+          <Link to="/feedback" className="header-link">의견 게시판</Link>
           <span className="user-info">
-            {user?.name} ({user?.role})
+            {user?.name}
+            <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">
+              {user?.role === 'admin' ? '관리자' : '일반 사용자'}
+            </span>
           </span>
           <button className="btn btn-secondary" onClick={logout}>
             Logout
@@ -206,6 +228,7 @@ export default function DashboardPage() {
             editable={false}
             events={events}
             select={handleDateSelect}
+            eventClick={handleEventClick}
             datesSet={handleDatesSet}
             slotMinTime="00:00:00"
             slotMaxTime="24:00:00"
@@ -215,6 +238,7 @@ export default function DashboardPage() {
             nowIndicator={true}
             height="auto"
             locale="ko"
+            eventClassNames={user?.role === 'admin' ? ['calendar-event-admin-deletable'] : undefined}
           />
         </div>
       </div>

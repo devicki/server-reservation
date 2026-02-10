@@ -50,6 +50,7 @@ class User(Base):
 
     # Relationships
     reservations = relationship("Reservation", back_populates="user", lazy="selectin")
+    feedback = relationship("Feedback", back_populates="user", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<User {self.email}>"
