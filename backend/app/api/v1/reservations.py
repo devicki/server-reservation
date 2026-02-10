@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 
@@ -22,6 +23,7 @@ from app.services.calendar_sync import calendar_sync_service
 from app.services.reservation import ReservationService
 
 router = APIRouter(prefix="/reservations", tags=["Reservations"])
+logger = logging.getLogger(__name__)
 
 
 def _to_response(reservation, calendar_synced: bool = False) -> ReservationResponse:
@@ -127,6 +129,12 @@ async def create_reservation(
         await db.refresh(reservation_loaded)
         calendar_synced = True
         reservation = reservation_loaded
+    else:
+        logger.warning(
+            "Calendar sync skipped or failed for reservation %s. "
+            "Check GOOGLE_CALENDAR_ENABLED, GOOGLE_SERVICE_ACCOUNT_FILE, GOOGLE_CALENDAR_ID and backend logs.",
+            reservation.id,
+        )
 
     return _to_response(reservation, calendar_synced=calendar_synced)
 

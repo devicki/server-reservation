@@ -237,6 +237,17 @@ body {
   font-size: 0.875rem;
 }
 
+.quick-reserve-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.quick-reserve-buttons .btn {
+  flex: 1;
+  min-width: 0;
+}
+
 .resource-list {
   list-style: none;
 }

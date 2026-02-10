@@ -1,6 +1,8 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from app.schemas.reservation import MAX_RESERVATION_HOURS
 
 from sqlalchemy import and_, select, func
 from sqlalchemy.exc import IntegrityError
@@ -153,6 +155,10 @@ class ReservationService:
 
         if new_end <= new_start:
             raise ConflictError("end_at must be after start_at")
+        if (new_end - new_start) > timedelta(hours=MAX_RESERVATION_HOURS):
+            raise ConflictError(
+                f"Reservation duration cannot exceed {MAX_RESERVATION_HOURS} hours"
+            )
 
         if start_at or end_at:
             conflict_stmt = (

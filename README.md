@@ -18,6 +18,9 @@
 ### 1. Docker Compose (권장)
 
 ```bash
+# backend/.env 없으면 생성 (비어 있어도 됨. 구글 캘린더 연동 시 backend/.env.example 참고)
+touch backend/.env
+
 # 전체 스택 실행
 docker compose up -d
 
@@ -78,17 +81,16 @@ UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
 2. Google Calendar API 활성화
 3. Service Account 생성 → JSON 키 파일 다운로드
 4. Google Calendar 생성 → Service Account 이메일에 "일정 변경 가능" 권한 공유
-5. 환경변수 설정:
+5. 환경변수 설정 (`backend/.env`에 추가):
 
 ```env
 GOOGLE_CALENDAR_ENABLED=true
-GOOGLE_SERVICE_ACCOUNT_FILE=/path/to/service-account-key.json
+GOOGLE_SERVICE_ACCOUNT_FILE=credentials/key.json
 GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
 ```
 
-**Docker 사용 시** `GOOGLE_SERVICE_ACCOUNT_FILE`는 **컨테이너 안 경로**로 설정하세요.  
-예: 키 파일을 `backend/credentials/`에 두었다면  
-`GOOGLE_SERVICE_ACCOUNT_FILE=/app/credentials/your-key.json`
+**상대 경로**(`credentials/key.json`)를 쓰면 로컬·Docker 공용으로 사용할 수 있습니다.  
+Docker Compose는 `backend/.env`를 컨테이너에 넘기므로, 테스트 스크립트와 앱이 같은 설정을 사용합니다.
 
 ### Google Calendar에 예약이 안 보일 때
 

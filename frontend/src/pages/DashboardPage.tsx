@@ -144,20 +144,36 @@ export default function DashboardPage() {
                 </option>
               ))}
             </select>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                const now = new Date();
-                const end = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-                setSelectedDates({
-                  start: now.toISOString(),
-                  end: end.toISOString(),
-                });
-                setModalOpen(true);
-              }}
-            >
-              + New Reservation
-            </button>
+            <div className="quick-reserve-buttons">
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  const now = new Date();
+                  const end = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                  setSelectedDates({
+                    start: now.toISOString(),
+                    end: end.toISOString(),
+                  });
+                  setModalOpen(true);
+                }}
+              >
+                + 2h 예약
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  const now = new Date();
+                  const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                  setSelectedDates({
+                    start: now.toISOString(),
+                    end: end.toISOString(),
+                  });
+                  setModalOpen(true);
+                }}
+              >
+                + 24h 예약
+              </button>
+            </div>
           </div>
 
           <div className="sidebar-section">
@@ -191,8 +207,10 @@ export default function DashboardPage() {
             events={events}
             select={handleDateSelect}
             datesSet={handleDatesSet}
-            slotMinTime="06:00:00"
+            slotMinTime="00:00:00"
             slotMaxTime="24:00:00"
+            scrollTime="00:00:00"
+            expandRows={true}
             allDaySlot={false}
             nowIndicator={true}
             height="auto"

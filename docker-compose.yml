@@ -15,12 +15,11 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/server_reservation
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
-      GOOGLE_CALENDAR_ENABLED: ${GOOGLE_CALENDAR_ENABLED:-false}
-      GOOGLE_SERVICE_ACCOUNT_FILE: ${GOOGLE_SERVICE_ACCOUNT_FILE:-}
-      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-}
       DEBUG: ${DEBUG:-true}
     depends_on:
       db:

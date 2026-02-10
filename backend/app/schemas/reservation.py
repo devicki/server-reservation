@@ -1,9 +1,11 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.reservation import ReservationStatus
+
+MAX_RESERVATION_HOURS = 24
 
 
 class ReservationCreateRequest(BaseModel):
@@ -17,6 +19,9 @@ class ReservationCreateRequest(BaseModel):
     def validate_time_range(self):
         if self.end_at <= self.start_at:
             raise ValueError("end_at must be after start_at")
+        duration = self.end_at - self.start_at
+        if duration > timedelta(hours=MAX_RESERVATION_HOURS):
+            raise ValueError(f"Reservation duration cannot exceed {MAX_RESERVATION_HOURS} hours")
         return self
 
 
@@ -28,8 +33,12 @@ class ReservationUpdateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_time_range(self):
-        if self.start_at and self.end_at and self.end_at <= self.start_at:
-            raise ValueError("end_at must be after start_at")
+        if self.start_at and self.end_at:
+            if self.end_at <= self.start_at:
+                raise ValueError("end_at must be after start_at")
+            duration = self.end_at - self.start_at
+            if duration > timedelta(hours=MAX_RESERVATION_HOURS):
+                raise ValueError(f"Reservation duration cannot exceed {MAX_RESERVATION_HOURS} hours")
         return self
 
 

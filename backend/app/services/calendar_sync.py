@@ -33,7 +33,7 @@ class CalendarSyncService:
         if not (self.settings.GOOGLE_SERVICE_ACCOUNT_FILE or "").strip():
             logger.warning(
                 "Google Calendar sync skipped: GOOGLE_SERVICE_ACCOUNT_FILE is not set. "
-                "Set it to the path of your Service Account JSON key (e.g. /app/credentials/key.json in Docker)."
+                "Set it to the path of your Service Account JSON key (e.g. credentials/key.json, 상대 경로 가능)."
             )
             return None
 
@@ -61,7 +61,7 @@ class CalendarSyncService:
         except FileNotFoundError:
             logger.error(
                 "Google Calendar: key file not found at %s. "
-                "In Docker, use path like /app/credentials/your-key.json",
+                "Use relative path from backend root (e.g. credentials/key.json).",
                 self.settings.GOOGLE_SERVICE_ACCOUNT_FILE,
             )
             return None
