@@ -27,10 +27,21 @@ class CalendarSyncService:
             return self._service
 
         if not self.settings.GOOGLE_CALENDAR_ENABLED:
+            logger.debug("Google Calendar sync skipped: GOOGLE_CALENDAR_ENABLED is false")
             return None
 
-        if not self.settings.GOOGLE_SERVICE_ACCOUNT_FILE:
-            logger.warning("Google Calendar enabled but no service account file configured")
+        if not (self.settings.GOOGLE_SERVICE_ACCOUNT_FILE or "").strip():
+            logger.warning(
+                "Google Calendar sync skipped: GOOGLE_SERVICE_ACCOUNT_FILE is not set. "
+                "Set it to the path of your Service Account JSON key (e.g. /app/credentials/key.json in Docker)."
+            )
+            return None
+
+        if not (self.settings.GOOGLE_CALENDAR_ID or "").strip():
+            logger.warning(
+                "Google Calendar sync skipped: GOOGLE_CALENDAR_ID is not set. "
+                "Set it to your calendar ID (e.g. xxx@group.calendar.google.com)."
+            )
             return None
 
         try:
@@ -38,13 +49,24 @@ class CalendarSyncService:
             from googleapiclient.discovery import build
 
             credentials = service_account.Credentials.from_service_account_file(
-                self.settings.GOOGLE_SERVICE_ACCOUNT_FILE,
+                self.settings.GOOGLE_SERVICE_ACCOUNT_FILE.strip(),
                 scopes=["https://www.googleapis.com/auth/calendar"],
             )
             self._service = build("calendar", "v3", credentials=credentials)
+            logger.info(
+                "Google Calendar client initialized. Calendar ID: %s",
+                self.settings.GOOGLE_CALENDAR_ID.strip(),
+            )
             return self._service
+        except FileNotFoundError:
+            logger.error(
+                "Google Calendar: key file not found at %s. "
+                "In Docker, use path like /app/credentials/your-key.json",
+                self.settings.GOOGLE_SERVICE_ACCOUNT_FILE,
+            )
+            return None
         except Exception as e:
-            logger.error(f"Failed to initialize Google Calendar service: {e}")
+            logger.error("Failed to initialize Google Calendar service: %s", e, exc_info=True)
             return None
 
     def _build_event(self, reservation: Reservation) -> dict:
@@ -75,22 +97,34 @@ class CalendarSyncService:
         """
         Create a Google Calendar event for a reservation.
         Returns the Google event ID or None if sync failed.
+        reservation must have user and server_resource loaded for _build_event.
         """
         service = self._get_service()
         if service is None:
+            return None
+
+        calendar_id = (self.settings.GOOGLE_CALENDAR_ID or "").strip()
+        if not calendar_id:
             return None
 
         try:
             event = self._build_event(reservation)
             result = (
                 service.events()
-                .insert(calendarId=self.settings.GOOGLE_CALENDAR_ID, body=event)
+                .insert(calendarId=calendar_id, body=event)
                 .execute()
             )
-            logger.info(f"Calendar event created: {result['id']} for reservation {reservation.id}")
+            logger.info("Calendar event created: %s for reservation %s", result["id"], reservation.id)
             return result["id"]
         except Exception as e:
-            logger.error(f"Failed to create calendar event for reservation {reservation.id}: {e}")
+            logger.error(
+                "Failed to create calendar event for reservation %s: %s. "
+                "Check: calendar shared with Service Account email (Make changes to events), "
+                "GOOGLE_CALENDAR_ID correct.",
+                reservation.id,
+                e,
+                exc_info=True,
+            )
             return None
 
     async def sync_update(self, reservation: Reservation) -> bool:

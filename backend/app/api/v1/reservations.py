@@ -2,9 +2,12 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
+from app.models.reservation import Reservation
 from app.database import get_db
 from app.models.reservation import ReservationStatus
 from app.models.user import User
@@ -106,13 +109,24 @@ async def create_reservation(
         end_at=body.end_at,
     )
 
-    # Sync to Google Calendar (after DB commit, non-blocking)
+    # Sync to Google Calendar (reservation must have user/server_resource for event title/description)
     calendar_synced = False
-    event_id = await calendar_sync_service.sync_create(reservation)
+    result = await db.execute(
+        select(Reservation)
+        .options(
+            selectinload(Reservation.user),
+            selectinload(Reservation.server_resource),
+        )
+        .where(Reservation.id == reservation.id)
+    )
+    reservation_loaded = result.scalar_one()
+    event_id = await calendar_sync_service.sync_create(reservation_loaded)
     if event_id:
-        reservation.google_event_id = event_id
+        reservation_loaded.google_event_id = event_id
         await db.commit()
+        await db.refresh(reservation_loaded)
         calendar_synced = True
+        reservation = reservation_loaded
 
     return _to_response(reservation, calendar_synced=calendar_synced)
 

@@ -86,6 +86,21 @@ GOOGLE_SERVICE_ACCOUNT_FILE=/path/to/service-account-key.json
 GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
 ```
 
+**Docker 사용 시** `GOOGLE_SERVICE_ACCOUNT_FILE`는 **컨테이너 안 경로**로 설정하세요.  
+예: 키 파일을 `backend/credentials/`에 두었다면  
+`GOOGLE_SERVICE_ACCOUNT_FILE=/app/credentials/your-key.json`
+
+### Google Calendar에 예약이 안 보일 때
+
+1. **환경변수**  
+   `GOOGLE_CALENDAR_ENABLED=true`, `GOOGLE_SERVICE_ACCOUNT_FILE`, `GOOGLE_CALENDAR_ID` 모두 설정했는지 확인.
+2. **캘린더 공유**  
+   Google Calendar 설정에서 해당 캘린더를 Service Account 이메일(JSON 키의 `client_email`)과 공유하고, 권한을 **"일정 변경 가능"**으로 설정.
+3. **캘린더 ID**  
+   Google Calendar 웹에서 해당 캘린더 → 설정 → "캘린더 통합"의 "캘린더 ID" 사용 (예: `xxx@group.calendar.google.com`).
+4. **백엔드 로그**  
+   예약 생성 시 `Calendar event created: ...` 로그가 나오는지 확인. 실패 시 `Failed to create calendar event` 또는 `key file not found` 등 원인이 로그에 출력됨.
+
 ---
 
 ## API Documentation

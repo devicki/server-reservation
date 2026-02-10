@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.database import get_db
@@ -129,6 +130,7 @@ async def get_server_status(
         # Current reservation (now is between start and end)
         current_result = await db.execute(
             select(Reservation)
+            .options(selectinload(Reservation.user))
             .where(
                 Reservation.server_resource_id == resource.id,
                 Reservation.status == ReservationStatus.ACTIVE,
@@ -142,6 +144,7 @@ async def get_server_status(
         # Next upcoming reservation
         next_result = await db.execute(
             select(Reservation)
+            .options(selectinload(Reservation.user))
             .where(
                 Reservation.server_resource_id == resource.id,
                 Reservation.status == ReservationStatus.ACTIVE,
