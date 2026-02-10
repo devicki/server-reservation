@@ -5,7 +5,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.models.reservation import ReservationStatus
 
-MAX_RESERVATION_HOURS = 24
+# 2일 이상 연속 예약 허용 (최대 7일)
+MAX_RESERVATION_HOURS = 24 * 7  # 168 hours
 
 
 class ReservationCreateRequest(BaseModel):

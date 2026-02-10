@@ -53,7 +53,14 @@ export default function ReservationModal({
       });
       onCreated();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create reservation');
+      const raw = err.response?.data?.detail;
+      const message =
+        typeof raw === 'string'
+          ? raw
+          : Array.isArray(raw) && raw.length > 0
+            ? raw.map((e: { msg?: string; message?: string }) => e?.msg ?? e?.message ?? String(e)).join('. ')
+            : 'Failed to create reservation';
+      setError(message);
     } finally {
       setLoading(false);
     }
