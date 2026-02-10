@@ -1,17 +1,15 @@
 import logging
 import uuid
-from datetime import datetime, timedelta
-
-from app.schemas.reservation import MAX_RESERVATION_HOURS
-
-from sqlalchemy import and_, select, func
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timedelta, timezone
 
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.reservation import Reservation, ReservationStatus
 from app.models.server_resource import ServerResource
 from app.models.user import User, UserRole
+from app.schemas.reservation import MAX_RESERVATION_HOURS
+from sqlalchemy import and_, func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +147,9 @@ class ReservationService:
         if reservation.status == ReservationStatus.CANCELED:
             raise ConflictError("Cannot modify a canceled reservation")
 
+        if reservation.end_at < datetime.now(timezone.utc):
+            raise ForbiddenError("Past schedules cannot be modified.")
+
         # If time is being changed, check for conflicts
         new_start = start_at or reservation.start_at
         new_end = end_at or reservation.end_at
@@ -216,6 +217,9 @@ class ReservationService:
 
         if reservation.status == ReservationStatus.CANCELED:
             raise ConflictError("Reservation is already canceled")
+
+        if reservation.end_at < datetime.now(timezone.utc):
+            raise ForbiddenError("Past schedules cannot be deleted.")
 
         reservation.status = ReservationStatus.CANCELED
         await db.commit()

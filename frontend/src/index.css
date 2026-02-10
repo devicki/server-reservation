@@ -156,7 +156,33 @@ body {
   background: var(--color-border);
 }
 
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+  border: 1px solid var(--color-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
 /* ─── Error ─── */
+.modal-loading {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.past-reservation-msg {
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
 .error-msg {
   background: #fef2f2;
   color: var(--color-danger);
@@ -390,12 +416,12 @@ body {
   font-size: 0.75rem;
 }
 
-/* 관리자: 일정 클릭 시 삭제 가능 표시 */
-.calendar-event-admin-deletable {
+/* 본인 예약(수정/삭제) 또는 관리자(삭제): 클릭 가능 표시 */
+.calendar-event-clickable {
   cursor: pointer;
 }
 
-.calendar-event-admin-deletable:hover {
+.calendar-event-clickable:hover {
   filter: brightness(0.95);
 }
 
@@ -454,6 +480,10 @@ body {
 
 .modal-actions .btn {
   width: auto;
+}
+
+.modal-actions .btn-danger {
+  margin-right: auto;
 }
 
 /* ─── Utility ─── */

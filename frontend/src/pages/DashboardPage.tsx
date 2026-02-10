@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDates, setSelectedDates] = useState<{ start: string; end: string } | null>(null);
   const [selectedResource, setSelectedResource] = useState<string>('');
+  const [editReservationId, setEditReservationId] = useState<string | null>(null);
   const dateRangeRef = useRef({ startStr: '', endStr: '' });
 
   const fetchResources = async () => {
@@ -95,6 +96,7 @@ export default function DashboardPage() {
   }, []);
 
   const handleDateSelect = (selectInfo: any) => {
+    setEditReservationId(null);
     setSelectedDates({
       start: selectInfo.startStr,
       end: selectInfo.endStr,
@@ -108,25 +110,48 @@ export default function DashboardPage() {
   };
 
   const handleEventClick = async (clickInfo: any) => {
-    if (user?.role !== 'admin') return;
     const eventId = clickInfo.event.id;
-    const title = clickInfo.event.title || '이 일정';
-    if (!window.confirm(`"${title}" 일정을 삭제(취소)하시겠습니까?`)) return;
-    try {
-      await reservationsAPI.cancel(eventId);
-      const { startStr, endStr } = dateRangeRef.current;
-      if (startStr && endStr) fetchTimeline(startStr, endStr);
-    } catch (err) {
-      console.error('Failed to cancel reservation:', err);
-      alert('일정 삭제에 실패했습니다.');
+    const isMine = clickInfo.event.extendedProps?.is_mine === true;
+    const isAdmin = user?.role === 'admin';
+
+    const eventEnd = clickInfo.event.end ? new Date(clickInfo.event.end) : null;
+    if (eventEnd && eventEnd <= new Date()) {
+      alert('과거 일정은 수정 및 삭제할 수 없습니다.');
+      return;
+    }
+
+    if (isMine) {
+      setSelectedDates(null);
+      setEditReservationId(eventId);
+      setModalOpen(true);
+      return;
+    }
+    if (isAdmin) {
+      const title = clickInfo.event.title || '이 일정';
+      if (!window.confirm(`"${title}" 일정을 삭제(취소)하시겠습니까?`)) return;
+      try {
+        await reservationsAPI.cancel(eventId);
+        const { startStr, endStr } = dateRangeRef.current;
+        if (startStr && endStr) fetchTimeline(startStr, endStr);
+      } catch (err) {
+        console.error('Failed to cancel reservation:', err);
+        alert('일정 삭제에 실패했습니다.');
+      }
     }
   };
 
   const handleReservationCreated = () => {
     setModalOpen(false);
-    // Refetch by triggering a re-render; FullCalendar will call handleDatesSet
+    setEditReservationId(null);
     setEvents([...events]);
     window.location.reload();
+  };
+
+  const handleReservationUpdatedOrDeleted = () => {
+    setModalOpen(false);
+    setEditReservationId(null);
+    const { startStr, endStr } = dateRangeRef.current;
+    if (startStr && endStr) fetchTimeline(startStr, endStr);
   };
 
   return (
@@ -238,7 +263,11 @@ export default function DashboardPage() {
             nowIndicator={true}
             height="auto"
             locale="ko"
-            eventClassNames={user?.role === 'admin' ? ['calendar-event-admin-deletable'] : undefined}
+            eventClassNames={(arg) =>
+              (arg.event.extendedProps?.is_mine || user?.role === 'admin')
+                ? ['calendar-event-clickable']
+                : []
+            }
           />
         </div>
       </div>
@@ -247,10 +276,16 @@ export default function DashboardPage() {
         <ReservationModal
           resources={resources}
           selectedResourceId={selectedResource}
-          initialStart={selectedDates?.start || ''}
-          initialEnd={selectedDates?.end || ''}
-          onClose={() => setModalOpen(false)}
+          initialStart={selectedDates?.start ?? ''}
+          initialEnd={selectedDates?.end ?? ''}
+          reservationId={editReservationId}
+          onClose={() => {
+            setModalOpen(false);
+            setEditReservationId(null);
+          }}
           onCreated={handleReservationCreated}
+          onUpdated={handleReservationUpdatedOrDeleted}
+          onDeleted={handleReservationUpdatedOrDeleted}
         />
       )}
     </div>
