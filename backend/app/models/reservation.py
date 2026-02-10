@@ -51,7 +51,12 @@ class Reservation(Base):
     )
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[ReservationStatus] = mapped_column(
-        Enum(ReservationStatus, name="reservation_status", native_enum=True),
+        Enum(
+            ReservationStatus,
+            name="reservation_status",
+            native_enum=True,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=ReservationStatus.ACTIVE,
     )

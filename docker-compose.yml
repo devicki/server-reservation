@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: server_reservation
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,8 +15,6 @@ services:
 
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/server_reservation
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
@@ -40,7 +36,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "3015:80"
     depends_on:
       - backend
 
