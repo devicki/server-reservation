@@ -2,8 +2,6 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
-    ports:
-      - "15433:5432"
     environment:
       POSTGRES_DB: server_reservation
       POSTGRES_USER: postgres
