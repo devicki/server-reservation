@@ -80,6 +80,7 @@ export default function UsersPage() {
           <Link to="/" className="header-link">예약</Link>
           <Link to="/feedback" className="header-link">의견 게시판</Link>
           <Link to="/servers" className="header-link">서버 관리</Link>
+          <Link to="/session-logs" className="header-link">세션 로그</Link>
           <span className="user-info">
             {user?.name}
             <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">

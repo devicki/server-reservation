@@ -175,6 +175,22 @@ export const feedbackAPI = {
   create: (data: { content: string }) => api.post('/feedback/', data),
 };
 
+// ─── Session Logs (Admin) ───────────────────────────────────
+export type SessionEventType = 'activated' | 'deactivated' | 'error';
+
+export interface SessionLogItem {
+  id: string;
+  reservation_id: string;
+  event_type: SessionEventType;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export const sessionLogsAPI = {
+  list: (params?: { reservation_id?: string; limit?: number; offset?: number }) =>
+    api.get<SessionLogItem[]>('/session-logs/', { params }),
+};
+
 // ─── Dashboard ─────────────────────────────────────────────
 export interface GpuInfo {
   index: number;

@@ -243,6 +243,9 @@ export default function ServersPage() {
           <Link to="/users" className="header-link">
             사용자 관리
           </Link>
+          <Link to="/session-logs" className="header-link">
+            세션 로그
+          </Link>
           <span className="user-info">
             {user?.name}
             <span

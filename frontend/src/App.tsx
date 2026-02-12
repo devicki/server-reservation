@@ -7,6 +7,7 @@ import FeedbackPage from './pages/FeedbackPage';
 import GpuHealthPage from './pages/GpuHealthPage';
 import ServersPage from './pages/ServersPage';
 import UsersPage from './pages/UsersPage';
+import SessionLogsPage from './pages/SessionLogsPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -112,6 +113,14 @@ export default function App() {
             element={
               <AdminRoute>
                 <ServersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/session-logs"
+            element={
+              <AdminRoute>
+                <SessionLogsPage />
               </AdminRoute>
             }
           />

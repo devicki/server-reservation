@@ -703,6 +703,87 @@ body {
   color: #64748b;
 }
 
+/* ─── Session Logs (Admin) ─── */
+.session-logs-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.session-logs-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+  margin-bottom: 0.75rem;
+}
+
+.session-logs-table .session-log-date {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.session-logs-table .session-log-reservation-id {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  word-break: break-all;
+  max-width: 220px;
+}
+
+.session-log-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.session-log-badge-activated {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.session-log-badge-deactivated {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.session-log-badge-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.session-log-details-cell {
+  background: #f8fafc;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.session-log-details-json {
+  margin: 0;
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.session-logs-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.session-logs-page-info {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
 /* ─── Servers (Admin) ─── */
 .servers-actions {
   display: flex;
