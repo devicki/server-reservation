@@ -4,7 +4,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { dashboardAPI, resourcesAPI, reservationsAPI } from '../api/client';
+import { configAPI, dashboardAPI, resourcesAPI, reservationsAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ReservationModal from '../components/ReservationModal';
 import ServerStatus from '../components/ServerStatus';
@@ -45,7 +45,17 @@ export default function DashboardPage() {
   const [selectedDates, setSelectedDates] = useState<{ start: string; end: string } | null>(null);
   const [selectedResource, setSelectedResource] = useState<string>('');
   const [editReservationId, setEditReservationId] = useState<string | null>(null);
+  const [maxReservationHours, setMaxReservationHours] = useState<number | null>(null);
   const dateRangeRef = useRef({ startStr: '', endStr: '' });
+
+  const fetchConfig = async () => {
+    try {
+      const res = await configAPI.get();
+      setMaxReservationHours(res.data.max_reservation_hours ?? null);
+    } catch {
+      setMaxReservationHours(null);
+    }
+  };
 
   const fetchResources = async () => {
     try {
@@ -93,6 +103,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchResources();
+    fetchConfig();
   }, []);
 
   const handleDateSelect = (selectInfo: any) => {
@@ -282,6 +293,7 @@ export default function DashboardPage() {
           initialStart={selectedDates?.start ?? ''}
           initialEnd={selectedDates?.end ?? ''}
           reservationId={editReservationId}
+          maxReservationHours={maxReservationHours ?? undefined}
           onClose={() => {
             setModalOpen(false);
             setEditReservationId(null);

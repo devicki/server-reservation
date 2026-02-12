@@ -2,11 +2,11 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from app.config import get_settings
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.reservation import Reservation, ReservationStatus
 from app.models.server_resource import ServerResource
 from app.models.user import User, UserRole
-from app.schemas.reservation import MAX_RESERVATION_HOURS
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -156,9 +156,10 @@ class ReservationService:
 
         if new_end <= new_start:
             raise ConflictError("end_at must be after start_at")
-        if (new_end - new_start) > timedelta(hours=MAX_RESERVATION_HOURS):
+        max_hours = get_settings().MAX_RESERVATION_HOURS
+        if (new_end - new_start) > timedelta(hours=max_hours):
             raise ConflictError(
-                f"Reservation duration cannot exceed {MAX_RESERVATION_HOURS} hours"
+                f"Reservation duration cannot exceed {max_hours} hours"
             )
 
         if start_at or end_at:

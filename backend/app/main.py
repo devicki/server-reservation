@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
 from app.api.v1.auth import router as auth_router
+from app.api.v1.config import router as config_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.reservations import router as reservations_router
@@ -106,6 +107,7 @@ app.add_middleware(
 # API v1 routers
 API_V1_PREFIX = "/api/v1"
 app.include_router(auth_router, prefix=API_V1_PREFIX)
+app.include_router(config_router, prefix=API_V1_PREFIX)
 app.include_router(resources_router, prefix=API_V1_PREFIX)
 app.include_router(users_router, prefix=API_V1_PREFIX)
 app.include_router(reservations_router, prefix=API_V1_PREFIX)

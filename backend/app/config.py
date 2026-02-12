@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # Reservation policy (예약 최대 허용 시간, 시간 단위)
+    MAX_RESERVATION_HOURS: int = 24 * 7  # 168 hours (7 days)
+
     # 최초 관리자 시드 (설정 시 앱 기동 시 admin 0명이면 이 계정으로 생성)
     ADMIN_EMAIL: str = ""
     ADMIN_PASSWORD: str = ""

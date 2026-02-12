@@ -57,6 +57,11 @@ api.interceptors.response.use(
 
 export default api;
 
+// ─── Config (public) ───────────────────────────────────────
+export const configAPI = {
+  get: () => api.get<{ max_reservation_hours: number }>('/config'),
+};
+
 // ─── Auth ──────────────────────────────────────────────────
 export const authAPI = {
   register: (data: { email: string; password: string; name: string }) =>
