@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { feedbackAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import './FeedbackPage.css';
+import './FeedbackPage.css';
+import './FeedbackPage.css';
 
 interface FeedbackItem {
   id: string;
