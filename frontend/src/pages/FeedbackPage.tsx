@@ -47,8 +47,11 @@ export default function FeedbackPage() {
       setContent('');
       await fetchList();
     } catch (err: unknown) {
-      const ax = err as { response?: { data?: { detail?: string } } };
-      setError(ax.response?.data?.detail ?? '의견 등록에 실패했습니다.');
+      const detail = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string | string[] } } }).response?.data?.detail
+        : undefined;
+      const message = Array.isArray(detail) ? detail[0] : typeof detail === 'string' ? detail : '의견 등록에 실패했습니다.';
+      setError(message || '의견 등록에 실패했습니다.');
     } finally {
       setSubmitLoading(false);
     }

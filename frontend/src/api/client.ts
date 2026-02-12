@@ -21,8 +21,14 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isLoginOrRegister =
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/register');
+
+    // 로그인/회원가입 실패(401)는 그대로 reject → 화면에서 에러 메시지 표시
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginOrRegister) {
       originalRequest._retry = true;
 
       const refreshToken = localStorage.getItem('refresh_token');

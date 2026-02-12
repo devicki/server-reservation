@@ -17,8 +17,12 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed');
+    } catch (err: unknown) {
+      const detail = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string | string[] } } }).response?.data?.detail
+        : undefined;
+      const message = Array.isArray(detail) ? detail[0] : typeof detail === 'string' ? detail : 'Login failed';
+      setError(message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }

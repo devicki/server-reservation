@@ -34,3 +34,8 @@ pgdata/
 
 # Alembic
 # Keep versions tracked
+
+# AI agents
+.cursor/
+.grok/
+
