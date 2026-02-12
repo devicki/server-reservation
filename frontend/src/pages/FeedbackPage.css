@@ -1,6 +1,7 @@
 /* ─── Feedback Page ─── */
 .feedback-content {
   max-width: 1100px;
+  min-width: 500px;
   margin: 2rem auto;
   padding: 0 1.5rem;
   display: flex;
@@ -26,7 +27,7 @@
 }
 
 .feedback-section h2::before {
-  content: '💬';
+  content: "💬";
   font-size: 1.5rem;
 }
 
@@ -51,7 +52,9 @@
   font-size: 1rem;
   resize: vertical;
   min-height: 120px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   background: var(--color-bg);
 }
 
@@ -92,7 +95,9 @@
   border-radius: var(--radius);
   padding: 1.5rem;
   box-shadow: var(--shadow);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .feedback-item:hover {
@@ -119,11 +124,15 @@
 }
 
 .feedback-item-author::before {
-  content: '';
+  content: "";
   display: inline-block;
   width: 24px;
   height: 24px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-hover)
+  );
   border-radius: 50%;
 }
 
@@ -149,7 +158,7 @@
 }
 
 .feedback-empty::before {
-  content: '📝';
+  content: "📝";
   display: block;
   font-size: 3rem;
   margin-bottom: 1rem;
