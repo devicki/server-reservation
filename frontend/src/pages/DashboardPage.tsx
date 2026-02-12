@@ -175,6 +175,7 @@ export default function DashboardPage() {
           <h1>GPU Server Reservation</h1>
         </div>
         <div className="header-right">
+          <Link to="/gpu-health" className="header-link">GPU 헬스</Link>
           <Link to="/feedback" className="header-link">의견 게시판</Link>
           {user?.role === 'admin' && (
             <>

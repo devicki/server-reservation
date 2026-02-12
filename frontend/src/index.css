@@ -736,6 +736,143 @@ body {
   margin-top: 0.25rem;
 }
 
+/* ─── GPU Health Page ─── */
+.gpu-health-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.gpu-health-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.gpu-health-toolbar h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.gpu-health-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.gpu-health-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+}
+
+.gpu-health-card-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.gpu-health-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.gpu-health-server-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.gpu-health-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+}
+
+.gpu-health-badge.ok {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.gpu-health-badge.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.gpu-health-error-msg {
+  font-size: 0.875rem;
+  color: var(--color-danger);
+  margin: 0 0 0.5rem;
+}
+
+.gpu-health-table-wrap {
+  overflow-x: auto;
+}
+
+.gpu-health-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.gpu-health-table th,
+.gpu-health-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gpu-health-table th {
+  background: var(--color-bg);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.gpu-health-table .gpu-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gpu-pct-bar-wrap {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.gpu-pct-bar {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  min-width: 2px;
+}
+
+.gpu-temp-high {
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+.header-link-active {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   .dashboard-content {

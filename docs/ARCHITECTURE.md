@@ -147,6 +147,7 @@
 | GET    | `/timeline`         | 서버별 타임라인      |
 | GET    | `/my-reservations`  | 내 예약 목록        |
 | GET    | `/status`           | 현재 서버 상태      |
+| GET    | `/gpu-health`       | GPU 헬스(vRAM/점유율/온도) — SSH 설정된 서버 대상 |
 
 ---
 

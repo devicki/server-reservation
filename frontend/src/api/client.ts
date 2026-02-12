@@ -163,6 +163,24 @@ export const feedbackAPI = {
 };
 
 // ─── Dashboard ─────────────────────────────────────────────
+export interface GpuInfo {
+  index: number;
+  name: string;
+  memory_total_mib: number | null;
+  memory_used_mib: number | null;
+  memory_free_mib: number | null;
+  utilization_gpu_pct: number | null;
+  temperature_gpu_c: number | null;
+}
+
+export interface ServerGpuHealth {
+  server_resource_id: string;
+  server_name: string;
+  ok: boolean;
+  error_message: string | null;
+  gpus: GpuInfo[];
+}
+
 export const dashboardAPI = {
   timeline: (params: {
     start_date: string;
@@ -172,4 +190,6 @@ export const dashboardAPI = {
   myReservations: (params?: Record<string, unknown>) =>
     api.get('/dashboard/my-reservations', { params }),
   status: () => api.get('/dashboard/status'),
+  gpuHealth: (params?: { server_resource_id?: string }) =>
+    api.get<{ servers: ServerGpuHealth[] }>('/dashboard/gpu-health', { params }),
 };

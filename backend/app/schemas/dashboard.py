@@ -43,3 +43,34 @@ class ResourceStatus(BaseModel):
 
 class StatusResponse(BaseModel):
     resources: list[ResourceStatus]
+
+
+# ─── GPU Health ─────────────────────────────────────────────
+
+
+class GpuInfo(BaseModel):
+    """Single GPU metrics from nvidia-smi."""
+
+    index: int
+    name: str
+    memory_total_mib: int | None = None
+    memory_used_mib: int | None = None
+    memory_free_mib: int | None = None
+    utilization_gpu_pct: int | None = None
+    temperature_gpu_c: int | None = None
+
+
+class ServerGpuHealth(BaseModel):
+    """GPU health for one server (one host)."""
+
+    server_resource_id: uuid.UUID
+    server_name: str
+    ok: bool
+    error_message: str | None = None
+    gpus: list[GpuInfo] = []
+
+
+class GpuHealthResponse(BaseModel):
+    """Response for GET /dashboard/gpu-health."""
+
+    servers: list[ServerGpuHealth]

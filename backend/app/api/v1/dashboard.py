@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 
@@ -12,13 +13,16 @@ from app.models.reservation import Reservation, ReservationStatus
 from app.models.server_resource import ServerResource
 from app.models.user import User
 from app.schemas.dashboard import (
+    GpuHealthResponse,
     ResourceStatus,
+    ServerGpuHealth,
     StatusResponse,
     TimelineReservation,
     TimelineResource,
     TimelineResponse,
 )
 from app.schemas.reservation import ReservationListResponse, ReservationResponse
+from app.services.gpu_health import collect_gpu_health
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -190,3 +194,59 @@ async def get_server_status(
         )
 
     return StatusResponse(resources=statuses)
+
+
+@router.get("/gpu-health", response_model=GpuHealthResponse)
+async def get_gpu_health(
+    server_resource_id: uuid.UUID | None = Query(
+        default=None, description="Filter by server resource ID"
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get GPU health (vRAM, utilization, temperature) for active servers with SSH configured."""
+    conditions = [
+        ServerResource.is_active.is_(True),
+        ServerResource.host.isnot(None),
+        ServerResource.ssh_username.isnot(None),
+        ServerResource.ssh_private_key.isnot(None),
+    ]
+    if server_resource_id is not None:
+        conditions.append(ServerResource.id == server_resource_id)
+
+    result = await db.execute(
+        select(ServerResource)
+        .where(*conditions)
+        .order_by(ServerResource.name)
+    )
+    resources = list(result.scalars().all())
+
+    async def fetch_one(r: ServerResource) -> ServerGpuHealth:
+        try:
+            result = await collect_gpu_health(
+                host=r.host or "",
+                port=r.ssh_port,
+                username=r.ssh_username or "",
+                private_key=r.ssh_private_key,
+            )
+            return ServerGpuHealth(
+                server_resource_id=r.id,
+                server_name=r.name,
+                ok=result.ok,
+                error_message=result.error_message,
+                gpus=result.gpus,
+            )
+        except Exception as e:
+            return ServerGpuHealth(
+                server_resource_id=r.id,
+                server_name=r.name,
+                ok=False,
+                error_message=str(e),
+                gpus=[],
+            )
+
+    if not resources:
+        return GpuHealthResponse(servers=[])
+
+    results = await asyncio.gather(*[fetch_one(r) for r in resources])
+    return GpuHealthResponse(servers=list(results))

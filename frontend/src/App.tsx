@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import FeedbackPage from './pages/FeedbackPage';
+import GpuHealthPage from './pages/GpuHealthPage';
 import ServersPage from './pages/ServersPage';
 import UsersPage from './pages/UsersPage';
 
@@ -79,6 +80,14 @@ export default function App() {
             element={
               <PrivateRoute>
                 <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/gpu-health"
+            element={
+              <PrivateRoute>
+                <GpuHealthPage />
               </PrivateRoute>
             }
           />
