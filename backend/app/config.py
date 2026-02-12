@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # 최초 관리자 시드 (설정 시 앱 기동 시 admin 0명이면 이 계정으로 생성)
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

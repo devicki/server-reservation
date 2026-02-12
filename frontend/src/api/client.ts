@@ -66,6 +66,14 @@ export const authAPI = {
   me: () => api.get('/auth/me'),
 };
 
+// ─── Users (Admin) ──────────────────────────────────────────
+export const usersAPI = {
+  list: (params?: { limit?: number; offset?: number }) =>
+    api.get('/users/', { params }),
+  update: (id: string, data: { role?: 'user' | 'admin'; is_active?: boolean }) =>
+    api.patch(`/users/${id}`, data),
+};
+
 // ─── Resources ─────────────────────────────────────────────
 export const resourcesAPI = {
   list: () => api.get('/resources/'),

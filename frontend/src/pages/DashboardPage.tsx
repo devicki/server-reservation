@@ -162,6 +162,9 @@ export default function DashboardPage() {
         </div>
         <div className="header-right">
           <Link to="/feedback" className="header-link">의견 게시판</Link>
+          {user?.role === 'admin' && (
+            <Link to="/users" className="header-link">사용자 관리</Link>
+          )}
           <span className="user-info">
             {user?.name}
             <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">

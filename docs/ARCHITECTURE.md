@@ -110,6 +110,15 @@
 | POST   | `/login`    | 로그인 (JWT 발급)   | ❌   |
 | GET    | `/me`       | 내 정보 조회        | ✅   |
 
+### Users (`/api/v1/users`) — 관리자 전용
+
+| Method | Endpoint   | 설명              | 권한   |
+|--------|------------|-------------------|--------|
+| GET    | `/`        | 사용자 목록 (페이징) | admin  |
+| PATCH  | `/{id}`    | 역할/활성 상태 변경  | admin  |
+
+최초 관리자: 환경변수 `ADMIN_EMAIL`, `ADMIN_PASSWORD` 설정 시, 앱 기동 시 admin이 0명이면 해당 계정으로 생성.
+
 ### Resources (`/api/v1/resources`)
 
 | Method | Endpoint | 설명       | 권한    |

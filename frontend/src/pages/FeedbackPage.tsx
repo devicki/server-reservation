@@ -73,6 +73,9 @@ export default function FeedbackPage() {
         </div>
         <div className="header-right">
           <Link to="/" className="header-link">예약</Link>
+          {user?.role === 'admin' && (
+            <Link to="/users" className="header-link">사용자 관리</Link>
+          )}
           <span className="user-info">
             {user?.name}
             <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">

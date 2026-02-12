@@ -614,6 +614,63 @@ body {
   margin: 0;
 }
 
+/* ─── Users (Admin) ─── */
+.users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.users-table th,
+.users-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.users-table th {
+  background: var(--color-bg);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.users-table tr:last-child td {
+  border-bottom: none;
+}
+
+.users-role-select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: var(--color-surface);
+}
+
+.users-status-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.users-status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.users-status-inactive {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   .dashboard-content {

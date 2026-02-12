@@ -10,9 +10,12 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.reservations import router as reservations_router
 from app.api.v1.resources import router as resources_router
+from app.api.v1.users import router as users_router
 from app.config import get_settings
+from app.core.security import hash_password
 from app.database import async_session_factory
 from app.models.server_resource import ServerResource
+from app.models.user import User, UserRole
 
 settings = get_settings()
 
@@ -43,6 +46,30 @@ async def seed_default_server_resource():
             await session.rollback()
 
 
+async def seed_initial_admin():
+    """관리자가 0명이고 ADMIN_EMAIL/ADMIN_PASSWORD가 설정돼 있으면 최초 관리자 1명 생성."""
+    if not (settings.ADMIN_EMAIL and settings.ADMIN_PASSWORD):
+        return
+    async with async_session_factory() as session:
+        try:
+            result = await session.execute(select(User).where(User.role == UserRole.ADMIN).limit(1))
+            if result.scalar_one_or_none() is not None:
+                return
+            admin = User(
+                email=settings.ADMIN_EMAIL.strip(),
+                password_hash=hash_password(settings.ADMIN_PASSWORD),
+                name="Admin",
+                role=UserRole.ADMIN,
+                is_active=True,
+            )
+            session.add(admin)
+            await session.commit()
+            logger.info("Seeded initial admin: %s", settings.ADMIN_EMAIL)
+        except Exception as e:
+            logger.warning("Seed initial admin skipped: %s", e)
+            await session.rollback()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
@@ -54,6 +81,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Google Calendar: disabled")
     await seed_default_server_resource()
+    await seed_initial_admin()
     yield
     logger.info("Shutting down...")
 
@@ -79,6 +107,7 @@ app.add_middleware(
 API_V1_PREFIX = "/api/v1"
 app.include_router(auth_router, prefix=API_V1_PREFIX)
 app.include_router(resources_router, prefix=API_V1_PREFIX)
+app.include_router(users_router, prefix=API_V1_PREFIX)
 app.include_router(reservations_router, prefix=API_V1_PREFIX)
 app.include_router(dashboard_router, prefix=API_V1_PREFIX)
 app.include_router(feedback_router, prefix=API_V1_PREFIX)
