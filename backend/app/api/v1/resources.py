@@ -1,4 +1,5 @@
 import asyncio
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, Query
@@ -13,6 +14,7 @@ from app.models.user import User, UserRole
 from app.schemas.resource import (
     ResourceCreateRequest,
     ResourceListResponse,
+    ResourcePermissionCheckResponse,
     ResourceResponse,
     ResourceTestConnectionResponse,
     ResourceUpdateRequest,
@@ -192,6 +194,114 @@ async def test_connection(
         message=result.message,
         stdout=result.stdout or None,
         stderr=result.stderr or None,
+    )
+
+
+# Nonexistent username used only to test usermod permission (no real user affected).
+_USERMOD_TEST_USER = "__permcheck_nonexistent_xyz__"
+
+
+def _parse_permission_check(stdout: str, stderr: str) -> tuple[bool, bool]:
+    """Parse output of sudo -n usermod -L and sudo -n pkill.
+    usermod: Permission denied / cannot lock / password / not in sudoers (in usermod section only) → no permission.
+    'does not exist' or 'unknown user' in usermod section → we have permission.
+    pkill: in pkill section only, password / not in sudoers → no permission; pkill_exit:0 → permission ok.
+    Split by line containing 'usermod_exit:' so output before it = usermod section, after = pkill section.
+    """
+    combined = ((stdout or "") + "\n" + (stderr or "")).lower()
+    lines = combined.splitlines()
+    usermod_end = -1
+    for i, line in enumerate(lines):
+        if re.search(r"usermod_exit:\d+", line):
+            usermod_end = i
+            break
+    if usermod_end >= 0:
+        usermod_section = "\n".join(lines[: usermod_end + 1])
+        pkill_section = "\n".join(lines[usermod_end + 1 :])
+    else:
+        usermod_section = combined
+        pkill_section = ""
+
+    usermod_denied = (
+        "permission denied" in usermod_section
+        or "cannot lock" in usermod_section
+        or "password" in usermod_section
+        or "not in sudoers" in usermod_section
+        or ("sudo:" in usermod_section and "is not in the sudoers" in usermod_section)
+    )
+    usermod_ok = (
+        not usermod_denied
+        and (
+            "does not exist" in usermod_section
+            or "unknown user" in usermod_section
+            or bool(re.search(r"usermod_exit:0\b", usermod_section))
+            or bool(re.search(r"usermod_exit:6\b", usermod_section))
+        )
+    )
+
+    pkill_denied = (
+        "password" in pkill_section
+        or "not in sudoers" in pkill_section
+        or ("sudo:" in pkill_section and "is not in the sudoers" in pkill_section)
+    )
+    pkill_ok = not pkill_denied and bool(re.search(r"pkill_exit:0\b", pkill_section))
+    return usermod_ok, pkill_ok
+
+
+@router.post(
+    "/{resource_id}/check-permissions",
+    response_model=ResourcePermissionCheckResponse,
+)
+async def check_permissions(
+    resource_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin),
+):
+    """Check if the SSH user can run sudo usermod / sudo pkill (other-user deactivate and process kill). Admin only.
+    Uses sudo -n (non-interactive). sudoers에 해당 계정이 usermod/pkill 권한으로 등록돼 있어야 함.
+    """
+    result = await db.execute(
+        select(ServerResource).where(ServerResource.id == resource_id)
+    )
+    resource = result.scalar_one_or_none()
+    if resource is None:
+        raise NotFoundError("Server resource not found")
+    if not resource.host or not resource.ssh_username or not resource.ssh_private_key:
+        return ResourcePermissionCheckResponse(
+            ok=False,
+            message="Server has no host, SSH username, or private key configured.",
+            usermod_ok=False,
+            pkill_ok=False,
+        )
+    # 다른 사용자 비활성화/프로세스 종료 권한: sudo로 실행 가능한지 확인 (sudo -n = 비밀번호 없이).
+    # usermod -L: 존재하지 않는 사용자에 대해 잠금 시도 → 권한 있으면 "does not exist", 없으면 Permission denied/cannot lock/sudo 거부.
+    usermod_cmd = f"sudo -n usermod -L {_USERMOD_TEST_USER} 2>&1; echo usermod_exit:$?"
+    pkill_cmd = "sudo -n pkill -h 2>&1; echo pkill_exit:$?"
+    cmd = f"({usermod_cmd}); ({pkill_cmd})"
+    run_result = await asyncio.to_thread(
+        run_command,
+        resource.host,
+        cmd,
+        port=resource.ssh_port,
+        username=resource.ssh_username,
+        private_key=resource.ssh_private_key,
+        timeout_sec=15.0,
+    )
+    if not run_result.ok:
+        return ResourcePermissionCheckResponse(
+            ok=False,
+            message=run_result.message,
+            usermod_ok=False,
+            pkill_ok=False,
+        )
+    usermod_ok, pkill_ok = _parse_permission_check(
+        run_result.stdout or "", run_result.stderr or ""
+    )
+    return ResourcePermissionCheckResponse(
+        ok=True,
+        message=None,
+        usermod_ok=usermod_ok,
+        pkill_ok=pkill_ok,
     )
 
 

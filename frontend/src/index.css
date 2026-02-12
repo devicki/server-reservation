@@ -722,6 +722,86 @@ body {
   color: var(--color-danger);
 }
 
+.servers-perm-result {
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.servers-perm-ok {
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+.servers-perm-fail {
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+/* 권한 확인 결과 섹션 */
+.servers-permission-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.servers-permission-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--color-text-muted);
+}
+
+.servers-permission-section .feedback-desc {
+  margin-bottom: 1rem;
+}
+
+.servers-permission-placeholder {
+  margin: 0;
+}
+
+.servers-permission-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  max-width: 480px;
+  box-shadow: var(--shadow);
+}
+
+.servers-permission-card-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.servers-permission-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.servers-permission-server-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.servers-permission-msg {
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+.servers-permission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9375rem;
+}
+
+.servers-permission-list li {
+  padding: 0.25rem 0;
+}
+
 .servers-toggle-btn {
   font-size: 0.8rem;
   padding: 0.35rem 0.6rem;

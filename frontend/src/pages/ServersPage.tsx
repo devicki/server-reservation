@@ -29,6 +29,14 @@ export default function ServersPage() {
     ok: boolean;
     message: string;
   } | null>(null);
+  const [permResult, setPermResult] = useState<{
+    id: string;
+    ok: boolean;
+    message?: string | null;
+    usermod_ok: boolean;
+    pkill_ok: boolean;
+  } | null>(null);
+  const [permCheckingId, setPermCheckingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchList = async () => {
@@ -180,6 +188,31 @@ export default function ServersPage() {
     }
   };
 
+  const handleCheckPermissions = async (id: string) => {
+    setPermResult(null);
+    setPermCheckingId(id);
+    try {
+      const res = await resourcesAPI.checkPermissions(id);
+      setPermResult({
+        id,
+        ok: res.data.ok,
+        message: res.data.message ?? undefined,
+        usermod_ok: res.data.usermod_ok,
+        pkill_ok: res.data.pkill_ok,
+      });
+    } catch {
+      setPermResult({
+        id,
+        ok: false,
+        message: "권한 확인 요청 실패",
+        usermod_ok: false,
+        pkill_ok: false,
+      });
+    } finally {
+      setPermCheckingId(null);
+    }
+  };
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -308,6 +341,21 @@ export default function ServersPage() {
                                 fontSize: "0.8rem",
                                 padding: "0.35rem 0.6rem",
                               }}
+                              onClick={() => handleCheckPermissions(r.id)}
+                              disabled={permCheckingId === r.id}
+                              title="SSH 사용자의 usermod, pkill 실행 권한 확인"
+                            >
+                              {permCheckingId === r.id
+                                ? "확인 중..."
+                                : "권한 확인"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{
+                                fontSize: "0.8rem",
+                                padding: "0.35rem 0.6rem",
+                              }}
                               onClick={() => openEdit(r)}
                             >
                               수정
@@ -349,6 +397,64 @@ export default function ServersPage() {
                   </tbody>
                 </table>
               </div>
+
+              <section className="servers-permission-section">
+                <h3 className="servers-permission-heading">권한 확인 결과</h3>
+                <p className="feedback-desc">
+                  아래에서 「권한 확인」 버튼으로 확인한 SSH 사용자(usermod, pkill)
+                  실행 권한 결과를 확인할 수 있습니다.
+                </p>
+                {permResult ? (
+                  <div
+                    className={
+                      permResult.ok
+                        ? "servers-permission-card"
+                        : "servers-permission-card servers-permission-card-error"
+                    }
+                  >
+                    <div className="servers-permission-card-header">
+                      <span className="servers-permission-server-name">
+                        {items.find((s) => s.id === permResult.id)?.name ??
+                          permResult.id}
+                      </span>
+                      {!permResult.ok && permResult.message && (
+                        <span className="servers-permission-msg">
+                          {permResult.message}
+                        </span>
+                      )}
+                    </div>
+                    {permResult.ok && (
+                      <ul className="servers-permission-list">
+                        <li>
+                          usermod (계정 잠금 등):{" "}
+                          {permResult.usermod_ok ? (
+                            <span className="servers-perm-ok">✓ 권한 있음</span>
+                          ) : (
+                            <span className="servers-perm-fail">
+                              ✗ 권한 없음
+                            </span>
+                          )}
+                        </li>
+                        <li>
+                          pkill (프로세스 종료):{" "}
+                          {permResult.pkill_ok ? (
+                            <span className="servers-perm-ok">✓ 권한 있음</span>
+                          ) : (
+                            <span className="servers-perm-fail">
+                              ✗ 권한 없음
+                            </span>
+                          )}
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                ) : (
+                  <p className="muted servers-permission-placeholder">
+                    서버 목록에서 「권한 확인」을 실행하면 결과가 여기에
+                    표시됩니다.
+                  </p>
+                )}
+              </section>
             </>
           )}
         </section>

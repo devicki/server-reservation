@@ -56,6 +56,15 @@ class ResourceTestConnectionResponse(BaseModel):
     stderr: str | None = None
 
 
+class ResourcePermissionCheckResponse(BaseModel):
+    """SSH 사용자의 usermod, pkill 실행 권한 확인 결과."""
+
+    ok: bool
+    message: str | None = None
+    usermod_ok: bool = False
+    pkill_ok: bool = False
+
+
 class RemoteUserItem(BaseModel):
     username: str
 
