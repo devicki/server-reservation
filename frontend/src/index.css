@@ -722,6 +722,13 @@ body {
   color: var(--color-danger);
 }
 
+.servers-toggle-btn {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.6rem;
+  min-width: 5.25rem;
+  box-sizing: border-box;
+}
+
 .form-hint {
   font-size: 0.8125rem;
   color: var(--color-text-muted);

@@ -110,9 +110,10 @@ export const resourcesAPI = {
   update: (
     id: string,
     data: {
-      name: string;
+      name?: string;
       description?: string;
       capacity?: number;
+      is_active?: boolean;
       host?: string;
       ssh_port?: number;
       ssh_username?: string;

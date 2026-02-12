@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { resourcesAPI, type ResourceItem } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { resourcesAPI, type ResourceItem } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 
 const emptyForm = {
-  name: '',
-  description: '',
-  capacity: '' as number | '',
-  host: '',
+  name: "",
+  description: "",
+  capacity: "" as number | "",
+  host: "",
   ssh_port: 22,
-  ssh_username: '',
-  ssh_private_key: '',
+  ssh_username: "",
+  ssh_private_key: "",
 };
 
 export default function ServersPage() {
@@ -18,7 +18,7 @@ export default function ServersPage() {
   const [items, setItems] = useState<ResourceItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -28,16 +28,17 @@ export default function ServersPage() {
     ok: boolean;
     message: string;
   } | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchList = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const res = await resourcesAPI.list({ include_inactive: true });
       setItems(res.data.items);
       setTotal(res.data.total);
     } catch {
-      setError('서버 목록을 불러올 수 없습니다.');
+      setError("서버 목록을 불러올 수 없습니다.");
     } finally {
       setLoading(false);
     }
@@ -60,33 +61,33 @@ export default function ServersPage() {
     setTestResult(null);
     setForm({
       name: r.name,
-      description: r.description ?? '',
-      capacity: r.capacity ?? '',
-      host: r.host ?? '',
+      description: r.description ?? "",
+      capacity: r.capacity ?? "",
+      host: r.host ?? "",
       ssh_port: r.ssh_port ?? 22,
-      ssh_username: r.ssh_username ?? '',
-      ssh_private_key: '',
+      ssh_username: r.ssh_username ?? "",
+      ssh_private_key: "",
     });
     try {
       const res = await resourcesAPI.get(r.id);
       const d = res.data;
       setForm({
         name: d.name,
-        description: d.description ?? '',
-        capacity: d.capacity ?? '',
-        host: d.host ?? '',
+        description: d.description ?? "",
+        capacity: d.capacity ?? "",
+        host: d.host ?? "",
         ssh_port: d.ssh_port ?? 22,
-        ssh_username: d.ssh_username ?? '',
-        ssh_private_key: d.ssh_private_key ?? '',
+        ssh_username: d.ssh_username ?? "",
+        ssh_private_key: d.ssh_private_key ?? "",
       });
     } catch {
-      setError('서버 정보를 불러올 수 없습니다.');
+      setError("서버 정보를 불러올 수 없습니다.");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSubmitting(true);
     try {
       const payload: {
@@ -100,7 +101,7 @@ export default function ServersPage() {
       } = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        capacity: form.capacity === '' ? undefined : Number(form.capacity),
+        capacity: form.capacity === "" ? undefined : Number(form.capacity),
         host: form.host.trim() || undefined,
         ssh_port: form.ssh_port,
         ssh_username: form.ssh_username.trim() || undefined,
@@ -117,31 +118,46 @@ export default function ServersPage() {
       await fetchList();
     } catch (err: unknown) {
       const detail =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string | string[] } } }).response?.data?.detail
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string | string[] } } })
+              .response?.data?.detail
           : undefined;
       const message = Array.isArray(detail)
         ? detail[0]
-        : typeof detail === 'string'
+        : typeof detail === "string"
           ? detail
           : editingId
-            ? '수정에 실패했습니다.'
-            : '등록에 실패했습니다.';
+            ? "수정에 실패했습니다."
+            : "등록에 실패했습니다.";
       setError(message);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleActiveToggle = async (id: string, is_active: boolean) => {
+    setTogglingId(id);
+    setError("");
+    try {
+      await resourcesAPI.update(id, { is_active });
+      await fetchList();
+      if (editingId === id) setModalOpen(false);
+    } catch {
+      setError("상태 변경에 실패했습니다.");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`"${name}" 서버를 비활성화(삭제)하시겠습니까?`)) return;
-    setError('');
+    setError("");
     try {
       await resourcesAPI.delete(id);
       await fetchList();
       if (editingId === id) setModalOpen(false);
     } catch {
-      setError('삭제에 실패했습니다.');
+      setError("삭제에 실패했습니다.");
     }
   };
 
@@ -155,7 +171,7 @@ export default function ServersPage() {
         message: res.data.message,
       });
     } catch {
-      setTestResult({ id, ok: false, message: '연결 테스트 요청 실패' });
+      setTestResult({ id, ok: false, message: "연결 테스트 요청 실패" });
     }
   };
 
@@ -177,8 +193,11 @@ export default function ServersPage() {
           </Link>
           <span className="user-info">
             {user?.name}
-            <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">
-              {user?.role === 'admin' ? '관리자' : '일반 사용자'}
+            <span
+              className={`role-badge role-${user?.role ?? "user"}`}
+              title="권한"
+            >
+              {user?.role === "admin" ? "관리자" : "일반 사용자"}
             </span>
           </span>
           <button className="btn btn-secondary" onClick={logout}>
@@ -187,16 +206,28 @@ export default function ServersPage() {
         </div>
       </header>
 
-      <div className="feedback-content" style={{ maxWidth: '1000px' }}>
+      <div className="feedback-content" style={{ maxWidth: "1000px" }}>
         <section className="feedback-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+            }}
+          >
             <div>
               <h2>서버 관리</h2>
               <p className="feedback-desc">
                 스케줄링 대상 서버 등록/삭제 및 SSH 연결 정보 설정 (관리자 전용)
               </p>
             </div>
-            <button type="button" className="btn btn-primary" onClick={openCreate}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openCreate}
+            >
               + 서버 등록
             </button>
           </div>
@@ -207,7 +238,7 @@ export default function ServersPage() {
             <p className="feedback-loading">불러오는 중...</p>
           ) : (
             <>
-              <p className="feedback-desc" style={{ marginBottom: '1rem' }}>
+              <p className="feedback-desc" style={{ marginBottom: "1rem" }}>
                 총 {total}개 서버
               </p>
               <div className="users-table-wrap">
@@ -225,15 +256,17 @@ export default function ServersPage() {
                     {items.map((r) => (
                       <tr key={r.id}>
                         <td>{r.name}</td>
-                        <td>{r.host || '—'}</td>
-                        <td>{r.ssh_username || '—'}</td>
+                        <td>{r.host || "—"}</td>
+                        <td>{r.ssh_username || "—"}</td>
                         <td>
                           <span
                             className={`users-status-badge ${
-                              r.is_active ? 'users-status-active' : 'users-status-inactive'
+                              r.is_active
+                                ? "users-status-active"
+                                : "users-status-inactive"
                             }`}
                           >
-                            {r.is_active ? '활성' : '비활성'}
+                            {r.is_active ? "활성" : "비활성"}
                           </span>
                         </td>
                         <td>
@@ -241,7 +274,10 @@ export default function ServersPage() {
                             <button
                               type="button"
                               className="btn btn-secondary"
-                              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+                              style={{
+                                fontSize: "0.8rem",
+                                padding: "0.35rem 0.6rem",
+                              }}
                               onClick={() => handleTestConnection(r.id)}
                               title="SSH 연결 테스트"
                             >
@@ -251,25 +287,51 @@ export default function ServersPage() {
                               <span
                                 className={
                                   testResult.ok
-                                    ? 'servers-test-ok'
-                                    : 'servers-test-fail'
+                                    ? "servers-test-ok"
+                                    : "servers-test-fail"
                                 }
                               >
-                                {testResult.ok ? '✓ 성공' : `✗ ${testResult.message}`}
+                                {testResult.ok
+                                  ? "✓ 성공"
+                                  : `✗ ${testResult.message}`}
                               </span>
                             )}
                             <button
                               type="button"
                               className="btn btn-secondary"
-                              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+                              style={{
+                                fontSize: "0.8rem",
+                                padding: "0.35rem 0.6rem",
+                              }}
                               onClick={() => openEdit(r)}
                             >
                               수정
                             </button>
                             <button
                               type="button"
+                              className={
+                                r.is_active
+                                  ? "btn btn-secondary servers-toggle-btn"
+                                  : "btn btn-primary servers-toggle-btn"
+                              }
+                              onClick={() =>
+                                handleActiveToggle(r.id, !r.is_active)
+                              }
+                              disabled={togglingId === r.id}
+                            >
+                              {togglingId === r.id
+                                ? "처리 중..."
+                                : r.is_active
+                                  ? "비활성화"
+                                  : "활성화"}
+                            </button>
+                            <button
+                              type="button"
                               className="btn btn-danger"
-                              style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+                              style={{
+                                fontSize: "0.8rem",
+                                padding: "0.35rem 0.6rem",
+                              }}
                               onClick={() => handleDelete(r.id, r.name)}
                               disabled={!r.is_active}
                             >
@@ -291,7 +353,7 @@ export default function ServersPage() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{editingId ? '서버 수정' : '서버 등록'}</h2>
+              <h2>{editingId ? "서버 수정" : "서버 등록"}</h2>
               <button
                 type="button"
                 className="modal-close"
@@ -306,7 +368,9 @@ export default function ServersPage() {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   required
                   placeholder="예: GPU Server A"
                 />
@@ -316,7 +380,9 @@ export default function ServersPage() {
                 <input
                   type="text"
                   value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="서버 설명"
                 />
               </div>
@@ -325,11 +391,12 @@ export default function ServersPage() {
                 <input
                   type="number"
                   min={1}
-                  value={form.capacity === '' ? '' : form.capacity}
+                  value={form.capacity === "" ? "" : form.capacity}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      capacity: e.target.value === '' ? '' : Number(e.target.value),
+                      capacity:
+                        e.target.value === "" ? "" : Number(e.target.value),
                     }))
                   }
                   placeholder="숫자"
@@ -340,7 +407,9 @@ export default function ServersPage() {
                 <input
                   type="text"
                   value={form.host}
-                  onChange={(e) => setForm((f) => ({ ...f, host: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, host: e.target.value }))
+                  }
                   placeholder="192.168.1.10 또는 server.example.com"
                 />
               </div>
@@ -352,7 +421,10 @@ export default function ServersPage() {
                   max={65535}
                   value={form.ssh_port}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, ssh_port: Number(e.target.value) || 22 }))
+                    setForm((f) => ({
+                      ...f,
+                      ssh_port: Number(e.target.value) || 22,
+                    }))
                   }
                 />
               </div>
@@ -361,7 +433,9 @@ export default function ServersPage() {
                 <input
                   type="text"
                   value={form.ssh_username}
-                  onChange={(e) => setForm((f) => ({ ...f, ssh_username: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, ssh_username: e.target.value }))
+                  }
                   placeholder="예: root, ubuntu"
                 />
               </div>
@@ -369,12 +443,17 @@ export default function ServersPage() {
                 <label>SSH 개인 키 (PEM)</label>
                 <textarea
                   value={form.ssh_private_key}
-                  onChange={(e) => setForm((f) => ({ ...f, ssh_private_key: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, ssh_private_key: e.target.value }))
+                  }
                   placeholder="-----BEGIN ... END ...-----"
                   rows={4}
                   className="modal-description-input"
                 />
-                <p className="form-hint">원격 명령 실행(getent 등)에 사용됩니다. 수정 시에만 변경된 값이 저장됩니다.</p>
+                <p className="form-hint">
+                  원격 명령 실행(getent 등)에 사용됩니다. 수정 시에만 변경된
+                  값이 저장됩니다.
+                </p>
               </div>
               <div className="modal-actions">
                 <button
@@ -389,7 +468,7 @@ export default function ServersPage() {
                   className="btn btn-primary"
                   disabled={submitting}
                 >
-                  {submitting ? '처리 중...' : editingId ? '저장' : '등록'}
+                  {submitting ? "처리 중..." : editingId ? "저장" : "등록"}
                 </button>
               </div>
             </form>
