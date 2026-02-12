@@ -44,6 +44,20 @@ class Settings(BaseSettings):
     # Reservation policy (예약 최대 허용 시간, 시간 단위)
     MAX_RESERVATION_HOURS: int = 24 * 7  # 168 hours (7 days)
 
+    # 서버 계정 예외: 예약 선택 목록에서 항상 제외할 OS 계정 (수정/삭제 불가, 시스템 기본값)
+    # 환경변수 EXCLUDE_USERS="root,dev,admin" 처럼 쉼표 구분으로 덮어쓸 수 있음
+    EXCLUDE_USERS: list[str] = ["root", "dev", "admin", "teleport", "ubuntu"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_exclude_users(cls, data: dict | object) -> dict | object:
+        if not isinstance(data, dict):
+            return data
+        v = data.get("EXCLUDE_USERS")
+        if isinstance(v, str):
+            data = {**data, "EXCLUDE_USERS": [x.strip() for x in v.split(",") if x.strip()]}
+        return data
+
     # 최초 관리자 시드 (설정 시 앱 기동 시 admin 0명이면 이 계정으로 생성)
     ADMIN_EMAIL: str = ""
     ADMIN_PASSWORD: str = ""

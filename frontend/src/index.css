@@ -816,6 +816,45 @@ body {
   margin-top: 0.25rem;
 }
 
+/* 서버 관리: 시스템 기본 예외 (읽기 전용) */
+.servers-default-exclude {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.servers-default-exclude-heading {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--color-text-muted);
+}
+
+.servers-default-exclude-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.servers-default-exclude-list-inline {
+  margin-top: 0.25rem;
+}
+
+.servers-default-exclude-tag {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  cursor: default;
+  user-select: none;
+}
+
 /* ─── GPU Health Page ─── */
 .gpu-health-content {
   flex: 1;

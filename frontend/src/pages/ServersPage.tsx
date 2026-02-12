@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { resourcesAPI, type ResourceItem } from "../api/client";
+import { configAPI, resourcesAPI, type ResourceItem } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
 const emptyForm = {
@@ -38,6 +38,16 @@ export default function ServersPage() {
   } | null>(null);
   const [permCheckingId, setPermCheckingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [defaultExcludeUsers, setDefaultExcludeUsers] = useState<string[]>([]);
+
+  const fetchConfig = async () => {
+    try {
+      const res = await configAPI.get();
+      setDefaultExcludeUsers(res.data.default_exclude_users ?? []);
+    } catch {
+      setDefaultExcludeUsers([]);
+    }
+  };
 
   const fetchList = async () => {
     setLoading(true);
@@ -55,6 +65,7 @@ export default function ServersPage() {
 
   useEffect(() => {
     fetchList();
+    fetchConfig();
   }, []);
 
   const openCreate = () => {
@@ -271,6 +282,28 @@ export default function ServersPage() {
           </div>
 
           {error && <div className="error-msg">{error}</div>}
+
+          {defaultExcludeUsers.length > 0 && (
+            <div className="servers-default-exclude">
+              <h3 className="servers-default-exclude-heading">
+                시스템 기본 예외 (수정·삭제 불가)
+              </h3>
+              <p className="feedback-desc">
+                아래 계정은 모든 서버에서 예약 계정 선택 목록에 항상 제외됩니다.
+              </p>
+              <div className="servers-default-exclude-list" role="list">
+                {defaultExcludeUsers.map((name) => (
+                  <span
+                    key={name}
+                    className="servers-default-exclude-tag"
+                    title="시스템 기본 예외 (수정 불가)"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <p className="feedback-loading">불러오는 중...</p>
@@ -566,8 +599,24 @@ export default function ServersPage() {
                   값이 저장됩니다.
                 </p>
               </div>
+              {defaultExcludeUsers.length > 0 && (
+                <div className="form-group">
+                  <label>시스템 기본 예외 (수정·삭제 불가)</label>
+                  <div className="servers-default-exclude-list servers-default-exclude-list-inline">
+                    {defaultExcludeUsers.map((name) => (
+                      <span
+                        key={name}
+                        className="servers-default-exclude-tag"
+                        title="시스템 기본 예외"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="form-group">
-                <label>서버 계정 예외 (제외할 계정)</label>
+                <label>서버 계정 예외 (추가 제외할 계정)</label>
                 <textarea
                   value={form.account_exclusions}
                   onChange={(e) =>
@@ -576,13 +625,13 @@ export default function ServersPage() {
                       account_exclusions: e.target.value,
                     }))
                   }
-                  placeholder="예약 선택 목록에서 제외할 OS 계정명을 한 줄에 하나씩 또는 쉼표로 구분하여 입력"
+                  placeholder="시스템 기본 예외 외에 이 서버에서만 추가로 제외할 OS 계정명 (한 줄에 하나 또는 쉼표 구분)"
                   rows={2}
                   className="modal-description-input"
                 />
                 <p className="form-hint">
-                  예: root, system (이 계정들은 예약 시 서버 계정 드롭다운에
-                  표시되지 않습니다)
+                  시스템 기본 예외에 더해, 위에 입력한 계정만 이 서버 예약
+                  목록에서 제외됩니다.
                 </p>
               </div>
               <div className="modal-actions">

@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin, get_current_user
+from app.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.database import get_db
 from app.models.server_resource import ServerResource
@@ -359,7 +360,9 @@ async def get_remote_users(
     if not run_result.ok:
         return RemoteUsersResponse(items=[])
     usernames = _parse_getent_passwd_home(run_result.stdout)
-    exclusions = _parse_exclusions(resource.account_exclusions)
+    default_exclude = set(get_settings().EXCLUDE_USERS)
+    server_exclude = _parse_exclusions(resource.account_exclusions)
+    exclusions = default_exclude | server_exclude
     usernames = [u for u in usernames if u not in exclusions]
     return RemoteUsersResponse(
         items=[{"username": u} for u in usernames]
