@@ -11,6 +11,7 @@ const emptyForm = {
   ssh_port: 22,
   ssh_username: "",
   ssh_private_key: "",
+  account_exclusions: "",
 };
 
 export default function ServersPage() {
@@ -67,6 +68,7 @@ export default function ServersPage() {
       ssh_port: r.ssh_port ?? 22,
       ssh_username: r.ssh_username ?? "",
       ssh_private_key: "",
+      account_exclusions: r.account_exclusions ?? "",
     });
     try {
       const res = await resourcesAPI.get(r.id);
@@ -79,6 +81,7 @@ export default function ServersPage() {
         ssh_port: d.ssh_port ?? 22,
         ssh_username: d.ssh_username ?? "",
         ssh_private_key: d.ssh_private_key ?? "",
+        account_exclusions: d.account_exclusions ?? "",
       });
     } catch {
       setError("서버 정보를 불러올 수 없습니다.");
@@ -98,6 +101,7 @@ export default function ServersPage() {
         ssh_port?: number;
         ssh_username?: string;
         ssh_private_key?: string;
+        account_exclusions?: string | null;
       } = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
@@ -105,6 +109,7 @@ export default function ServersPage() {
         host: form.host.trim() || undefined,
         ssh_port: form.ssh_port,
         ssh_username: form.ssh_username.trim() || undefined,
+        account_exclusions: form.account_exclusions.trim() || null,
       };
       if (form.ssh_private_key.trim()) {
         payload.ssh_private_key = form.ssh_private_key.trim();
@@ -453,6 +458,25 @@ export default function ServersPage() {
                 <p className="form-hint">
                   원격 명령 실행(getent 등)에 사용됩니다. 수정 시에만 변경된
                   값이 저장됩니다.
+                </p>
+              </div>
+              <div className="form-group">
+                <label>서버 계정 예외 (제외할 계정)</label>
+                <textarea
+                  value={form.account_exclusions}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      account_exclusions: e.target.value,
+                    }))
+                  }
+                  placeholder="예약 선택 목록에서 제외할 OS 계정명을 한 줄에 하나씩 또는 쉼표로 구분하여 입력"
+                  rows={2}
+                  className="modal-description-input"
+                />
+                <p className="form-hint">
+                  예: root, system (이 계정들은 예약 시 서버 계정 드롭다운에
+                  표시되지 않습니다)
                 </p>
               </div>
               <div className="modal-actions">

@@ -29,6 +29,7 @@ interface CalendarEvent {
     user_id: string;
     resource_name: string;
     is_mine: boolean;
+    account_name?: string | null;
   };
 }
 
@@ -79,9 +80,10 @@ export default function DashboardPage() {
       res.data.resources.forEach((resource: any, idx: number) => {
         const color = COLORS[idx % COLORS.length];
         resource.reservations.forEach((r: any) => {
+          const accountPart = r.account_name ? ` (${r.account_name})` : '';
           allEvents.push({
             id: r.id,
-            title: `[${resource.name}] ${r.title} - ${r.user_name}`,
+            title: `[${resource.name}] ${r.title} - ${r.user_name}${accountPart}`,
             start: r.start_at,
             end: r.end_at,
             backgroundColor: r.is_mine ? color : `${color}88`,
@@ -91,6 +93,7 @@ export default function DashboardPage() {
               user_id: r.user_id,
               resource_name: resource.name,
               is_mine: r.is_mine,
+              account_name: r.account_name ?? null,
             },
           });
         });

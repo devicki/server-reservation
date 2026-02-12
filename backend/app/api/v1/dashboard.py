@@ -47,6 +47,7 @@ async def get_timeline(
     # Get reservations in the time range
     res_result = await db.execute(
         select(Reservation)
+        .options(selectinload(Reservation.user))
         .where(
             Reservation.status == ReservationStatus.ACTIVE,
             Reservation.start_at < end_date,
@@ -67,6 +68,7 @@ async def get_timeline(
             title=res.title,
             user_name=res.user.name if res.user else "Unknown",
             user_id=res.user_id,
+            account_name=res.account_name,
             start_at=res.start_at,
             end_at=res.end_at,
             is_mine=res.user_id == current_user.id,
@@ -171,6 +173,7 @@ async def get_server_status(
                 title=r.title,
                 user_name=r.user.name if r.user else "Unknown",
                 user_id=r.user_id,
+                account_name=r.account_name,
                 start_at=r.start_at,
                 end_at=r.end_at,
                 is_mine=r.user_id == current_user.id,

@@ -25,6 +25,7 @@ class ReservationCreateRequest(BaseModel):
     server_resource_id: uuid.UUID
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
+    account_name: str | None = Field(default=None, max_length=100)
     start_at: datetime
     end_at: datetime
 
@@ -44,6 +45,7 @@ class ReservationCreateRequest(BaseModel):
 class ReservationUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
+    account_name: str | None = Field(default=None, max_length=100)
     start_at: datetime | None = None
     end_at: datetime | None = None
 
@@ -84,6 +86,7 @@ class ReservationResponse(BaseModel):
     server_resource_id: uuid.UUID
     title: str
     description: str | None
+    account_name: str | None = None
     start_at: datetime
     end_at: datetime
     status: ReservationStatus

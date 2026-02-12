@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { reservationsAPI } from "../api/client";
+import { reservationsAPI, resourcesAPI } from "../api/client";
 
 interface Resource {
   id: string;
@@ -58,6 +58,9 @@ export default function ReservationModal({
   const [loading, setLoading] = useState(false);
   const [loadingReservation, setLoadingReservation] = useState(isEdit);
   const [isPastReservation, setIsPastReservation] = useState(false);
+  const [accountList, setAccountList] = useState<string[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
 
   useEffect(() => {
     if (!reservationId) return;
@@ -70,6 +73,7 @@ export default function ReservationModal({
         setResourceId(r.server_resource_id);
         setTitle(r.title);
         setDescription(r.description ?? "");
+        setSelectedAccount(r.account_name ?? "");
         setStartAt(toLocalDatetime(r.start_at));
         setEndAt(toLocalDatetime(r.end_at));
         setIsPastReservation(new Date(r.end_at) <= new Date());
@@ -84,6 +88,33 @@ export default function ReservationModal({
     };
   }, [reservationId]);
 
+  useEffect(() => {
+    if (!resourceId) {
+      setAccountList([]);
+      setSelectedAccount("");
+      return;
+    }
+    let cancelled = false;
+    setLoadingAccounts(true);
+    setAccountList([]);
+    resourcesAPI
+      .getRemoteUsers(resourceId)
+      .then((res) => {
+        if (!cancelled) {
+          setAccountList(res.data.items.map((i) => i.username));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAccountList([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAccounts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resourceId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -94,6 +125,7 @@ export default function ReservationModal({
         await reservationsAPI.update(reservationId, {
           title,
           description: description || undefined,
+          account_name: selectedAccount,
           start_at: new Date(startAt).toISOString(),
           end_at: new Date(endAt).toISOString(),
         });
@@ -103,6 +135,7 @@ export default function ReservationModal({
           server_resource_id: resourceId,
           title,
           description: description || undefined,
+          account_name: selectedAccount,
           start_at: new Date(startAt).toISOString(),
           end_at: new Date(endAt).toISOString(),
         });
@@ -187,6 +220,30 @@ export default function ReservationModal({
                   </select>
                 </div>
                 <div className="form-group">
+                  <label>서버 계정 *</label>
+                  <select
+                    value={selectedAccount}
+                    onChange={(e) => setSelectedAccount(e.target.value)}
+                    disabled={isPastReservation || loadingAccounts}
+                    required
+                  >
+                    <option value="">선택하세요</option>
+                    {accountList.map((username) => (
+                      <option key={username} value={username}>
+                        {username}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingAccounts && (
+                    <p className="form-hint">계정 목록 불러오는 중...</p>
+                  )}
+                  {!loadingAccounts && accountList.length === 0 && resourceId && (
+                    <p className="form-hint" style={{ color: "var(--color-danger)" }}>
+                      계정 목록을 불러올 수 없습니다. 서버 관리에서 SSH 설정 및 제외 계정을 확인하세요.
+                    </p>
+                  )}
+                </div>
+                <div className="form-group">
                   <label>Title</label>
                   <input
                     type="text"
@@ -262,7 +319,11 @@ export default function ReservationModal({
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={loading || isPastReservation}
+                  disabled={
+                    loading ||
+                    isPastReservation ||
+                    (!isEdit && !loadingAccounts && accountList.length === 0)
+                  }
                 >
                   {loading
                     ? isEdit

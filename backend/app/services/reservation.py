@@ -24,6 +24,7 @@ class ReservationService:
         start_at: datetime,
         end_at: datetime,
         description: str | None = None,
+        account_name: str | None = None,
     ) -> Reservation:
         """Create a reservation with conflict check using SELECT FOR UPDATE."""
         now = datetime.now(timezone.utc)
@@ -66,6 +67,7 @@ class ReservationService:
             server_resource_id=server_resource_id,
             title=title,
             description=description,
+            account_name=account_name,
             start_at=start_at,
             end_at=end_at,
         )
@@ -142,6 +144,7 @@ class ReservationService:
         description: str | None = None,
         start_at: datetime | None = None,
         end_at: datetime | None = None,
+        account_name: str | None = None,
     ) -> Reservation:
         """Update a reservation. Only the owner can update."""
         reservation = await ReservationService.get_by_id(db, reservation_id)
@@ -197,6 +200,8 @@ class ReservationService:
             reservation.title = title
         if description is not None:
             reservation.description = description
+        if account_name is not None:
+            reservation.account_name = account_name
         if start_at is not None:
             reservation.start_at = start_at
         if end_at is not None:

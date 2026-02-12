@@ -107,6 +107,7 @@ async def create_reservation(
         server_resource_id=body.server_resource_id,
         title=body.title,
         description=body.description,
+        account_name=body.account_name,
         start_at=body.start_at,
         end_at=body.end_at,
     )
@@ -153,6 +154,7 @@ async def update_reservation(
         current_user=current_user,
         title=body.title,
         description=body.description,
+        account_name=body.account_name,
         start_at=body.start_at,
         end_at=body.end_at,
     )

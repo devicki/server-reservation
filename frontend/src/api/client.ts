@@ -90,6 +90,7 @@ export interface ResourceItem {
   ssh_port: number;
   ssh_username: string | null;
   ssh_private_key?: string | null;
+  account_exclusions: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +107,7 @@ export const resourcesAPI = {
     ssh_port?: number;
     ssh_username?: string;
     ssh_private_key?: string;
+    account_exclusions?: string;
   }) => api.post('/resources/', data),
   update: (
     id: string,
@@ -118,6 +120,7 @@ export const resourcesAPI = {
       ssh_port?: number;
       ssh_username?: string;
       ssh_private_key?: string;
+      account_exclusions?: string | null;
     }
   ) => api.put(`/resources/${id}`, data),
   delete: (id: string) => api.delete(`/resources/${id}`),
@@ -125,6 +128,8 @@ export const resourcesAPI = {
     api.post<{ ok: boolean; message: string; stdout?: string; stderr?: string }>(
       `/resources/${id}/test-connection`
     ),
+  getRemoteUsers: (id: string) =>
+    api.get<{ items: { username: string }[] }>(`/resources/${id}/remote-users`),
 };
 
 // ─── Reservations ──────────────────────────────────────────
@@ -136,6 +141,7 @@ export const reservationsAPI = {
     server_resource_id: string;
     title: string;
     description?: string;
+    account_name?: string;
     start_at: string;
     end_at: string;
   }) => api.post('/reservations/', data),

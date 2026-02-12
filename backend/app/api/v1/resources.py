@@ -16,6 +16,7 @@ from app.schemas.resource import (
     ResourceResponse,
     ResourceTestConnectionResponse,
     ResourceUpdateRequest,
+    RemoteUsersResponse,
 )
 from app.services.ssh_runner import run_command
 
@@ -91,6 +92,7 @@ async def create_resource(
         ssh_port=body.ssh_port,
         ssh_username=body.ssh_username,
         ssh_private_key=body.ssh_private_key,
+        account_exclusions=body.account_exclusions,
     )
     db.add(resource)
     await db.commit()
@@ -129,6 +131,8 @@ async def update_resource(
         resource.ssh_username = body.ssh_username
     if body.ssh_private_key is not None:
         resource.ssh_private_key = body.ssh_private_key
+    if body.account_exclusions is not None:
+        resource.account_exclusions = body.account_exclusions
 
     await db.commit()
     await db.refresh(resource)
@@ -188,4 +192,65 @@ async def test_connection(
         message=result.message,
         stdout=result.stdout or None,
         stderr=result.stderr or None,
+    )
+
+
+def _parse_getent_passwd_home(stdout: str) -> list[str]:
+    """Parse getent passwd | grep '/home' output; return list of usernames (first column)."""
+    usernames: list[str] = []
+    for line in stdout.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(":")
+        if len(parts) >= 6 and "/home" in parts[5]:
+            name = parts[0].strip()
+            if name and name not in usernames:
+                usernames.append(name)
+    return sorted(usernames)
+
+
+def _parse_exclusions(raw: str | None) -> set[str]:
+    """Parse account_exclusions string (comma or newline separated) into set of usernames."""
+    if not raw or not raw.strip():
+        return set()
+    out: set[str] = set()
+    for part in raw.replace(",", "\n").splitlines():
+        name = part.strip()
+        if name:
+            out.add(name)
+    return out
+
+
+@router.get("/{resource_id}/remote-users", response_model=RemoteUsersResponse)
+async def get_remote_users(
+    resource_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Get OS user list from the server (getent passwd | grep '/home'). Requires resource to have SSH configured."""
+    result = await db.execute(
+        select(ServerResource).where(ServerResource.id == resource_id)
+    )
+    resource = result.scalar_one_or_none()
+    if resource is None:
+        raise NotFoundError("Server resource not found")
+    if not resource.host or not resource.ssh_username or not resource.ssh_private_key:
+        return RemoteUsersResponse(items=[])
+    run_result = await asyncio.to_thread(
+        run_command,
+        resource.host,
+        "getent passwd | grep '/home'",
+        port=resource.ssh_port,
+        username=resource.ssh_username,
+        private_key=resource.ssh_private_key,
+        timeout_sec=15.0,
+    )
+    if not run_result.ok:
+        return RemoteUsersResponse(items=[])
+    usernames = _parse_getent_passwd_home(run_result.stdout)
+    exclusions = _parse_exclusions(resource.account_exclusions)
+    usernames = [u for u in usernames if u not in exclusions]
+    return RemoteUsersResponse(
+        items=[{"username": u} for u in usernames]
     )

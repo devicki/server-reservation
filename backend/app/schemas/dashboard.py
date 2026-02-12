@@ -9,6 +9,7 @@ class TimelineReservation(BaseModel):
     title: str
     user_name: str
     user_id: uuid.UUID
+    account_name: str | None = None
     start_at: datetime
     end_at: datetime
     is_mine: bool = False
