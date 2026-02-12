@@ -101,7 +101,7 @@ export default function ServersPage() {
         ssh_port?: number;
         ssh_username?: string;
         ssh_private_key?: string;
-        account_exclusions?: string | null;
+        account_exclusions?: string;
       } = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
@@ -109,7 +109,7 @@ export default function ServersPage() {
         host: form.host.trim() || undefined,
         ssh_port: form.ssh_port,
         ssh_username: form.ssh_username.trim() || undefined,
-        account_exclusions: form.account_exclusions.trim() || null,
+        account_exclusions: form.account_exclusions.trim() || undefined,
       };
       if (form.ssh_private_key.trim()) {
         payload.ssh_private_key = form.ssh_private_key.trim();
