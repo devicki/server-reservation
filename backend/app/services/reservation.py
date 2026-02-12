@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.config import get_settings
-from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.models.reservation import Reservation, ReservationStatus
 from app.models.server_resource import ServerResource
 from app.models.user import User, UserRole
@@ -26,6 +26,11 @@ class ReservationService:
         description: str | None = None,
     ) -> Reservation:
         """Create a reservation with conflict check using SELECT FOR UPDATE."""
+        now = datetime.now(timezone.utc)
+        start_utc = start_at.astimezone(timezone.utc) if start_at.tzinfo else start_at.replace(tzinfo=timezone.utc)
+        if start_utc < now:
+            raise BadRequestError("Reservation start time cannot be in the past")
+
         # Verify the server resource exists and is active
         result = await db.execute(
             select(ServerResource).where(
@@ -150,9 +155,14 @@ class ReservationService:
         if reservation.end_at < datetime.now(timezone.utc):
             raise ForbiddenError("Past schedules cannot be modified.")
 
-        # If time is being changed, check for conflicts
+        now = datetime.now(timezone.utc)
         new_start = start_at or reservation.start_at
         new_end = end_at or reservation.end_at
+        new_start_utc = new_start.astimezone(timezone.utc) if new_start.tzinfo else new_start.replace(tzinfo=timezone.utc)
+        if new_start_utc < now:
+            raise BadRequestError("Reservation start time cannot be in the past")
+
+        # If time is being changed, check for conflicts
 
         if new_end <= new_start:
             raise ConflictError("end_at must be after start_at")

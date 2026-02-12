@@ -30,6 +30,12 @@ function toLocalDatetime(iso: string): string {
   return local.toISOString().slice(0, 16);
 }
 
+function getMinDatetimeLocal(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 export default function ReservationModal({
   resources,
   selectedResourceId,
@@ -158,55 +164,57 @@ export default function ReservationModal({
                 과거 일정은 수정 및 삭제할 수 없습니다.
               </div>
             )}
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Server Resource</label>
-                <select
-                  value={resourceId}
-                  onChange={(e) => setResourceId(e.target.value)}
-                  required
-                  disabled={isEdit || isPastReservation}
-                  title={
-                    isEdit
-                      ? "예약 수정 시 리소스는 변경할 수 없습니다."
-                      : undefined
-                  }
-                >
-                  {resources.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  placeholder="e.g. Model Training - ResNet50"
-                  disabled={isPastReservation}
-                />
-              </div>
-              <div className="form-group">
-                <label>Description (optional)</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Details about your reservation..."
-                  rows={3}
-                  disabled={isPastReservation}
-                />
-              </div>
-              <div className="form-row">
+            <form onSubmit={handleSubmit} className="modal-form">
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Server Resource</label>
+                  <select
+                    value={resourceId}
+                    onChange={(e) => setResourceId(e.target.value)}
+                    required
+                    disabled={isEdit || isPastReservation}
+                    title={
+                      isEdit
+                        ? "예약 수정 시 리소스는 변경할 수 없습니다."
+                        : undefined
+                    }
+                  >
+                    {resources.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Title</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    placeholder="e.g. Model Training - ResNet50"
+                    disabled={isPastReservation}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Description (optional)</label>
+                  <textarea
+                    className="modal-description-input"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Details about your reservation..."
+                    rows={3}
+                    disabled={isPastReservation}
+                  />
+                </div>
                 <div className="form-group">
                   <label>Start</label>
                   <input
                     type="datetime-local"
                     value={startAt}
                     onChange={(e) => setStartAt(e.target.value)}
+                    min={!isPastReservation ? getMinDatetimeLocal() : undefined}
                     required
                     disabled={isPastReservation}
                   />
@@ -217,17 +225,22 @@ export default function ReservationModal({
                     type="datetime-local"
                     value={endAt}
                     onChange={(e) => setEndAt(e.target.value)}
+                    min={
+                      !isPastReservation
+                        ? startAt || getMinDatetimeLocal()
+                        : undefined
+                    }
                     required
                     disabled={isPastReservation}
                   />
                 </div>
-              </div>
               {!isEdit && maxReservationHours != null && maxReservationHours > 0 && (
                 <p className="reservation-max-hours-hint" aria-live="polite">
                   예약은 최대 {maxReservationHours}시간(
                   {maxReservationHours / 24}일)까지 가능합니다.
                 </p>
               )}
+              </div>
               <div className="modal-actions">
                 {isEdit && (
                   <button
