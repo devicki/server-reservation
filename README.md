@@ -2,12 +2,15 @@
 
 공유 GPU 서버 자원의 사용 시간을 예약하고 충돌을 방지하며, Google Calendar로 시각화하는 시스템.
 
+**🚀 새 기능: 예약 기반 자동 세션 관리 시스템** - 예약 시간에 따라 서버 계정을 자동으로 활성화/비활성화하고 프로세스를 관리합니다.
+
 ## Architecture
 
 - **Backend**: FastAPI + SQLAlchemy (async) + PostgreSQL
 - **Frontend**: React + FullCalendar + Vite
 - **Auth**: JWT (email/password)
 - **Calendar**: Google Calendar API (Service Account, one-way sync)
+- **Scheduler**: APScheduler (예약 기반 세션 관리)
 
 상세 설계: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -105,6 +108,67 @@ Docker Compose는 `backend/.env`를 컨테이너에 넘기므로, 테스트 스�
 
 ---
 
+## 예약 기반 세션 관리 (Session Scheduler)
+
+시스템이 예약 시간에 따라 **자동으로** 서버 계정의 접근 권한을 제어하고 프로세스를 관리합니다.
+
+### 주요 기능
+
+- **자동 예약 활성화** (시작 시)
+  - 예약자 계정 잠금 해제
+  - 예외 계정 제외 모든 계정 잠금
+  - 예외 계정 제외 모든 프로세스 종료 (클린업)
+
+- **자동 예약 비활성화** (종료 시)
+  - 예약자 프로세스 강제 종료
+  - 예약자 계정 잠금
+
+- **스케줄러 설정**
+  - 매 1분마다 자동 실행
+  - 서버 시작 시 자동 시작
+  - 중복 실행 방지 (Idempotency)
+
+### 설정 방법
+
+1. **서버 SSH 설정** (관리자 권한 필요)
+   ```bash
+   curl -X PUT http://localhost:8000/api/v1/resources/{server_id} \
+     -H "Authorization: Bearer {admin_token}" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "host": "192.168.1.100",
+       "ssh_port": 22,
+       "ssh_username": "admin",
+       "ssh_private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"
+     }'
+   ```
+
+2. **예약 생성 시 계정 지정**
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/reservations \
+     -H "Authorization: Bearer {user_token}" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "server_resource_id": "{server_id}",
+       "title": "GPU 훈련",
+       "account_name": "user01",
+       "start_at": "2026-02-15T10:00:00+09:00",
+       "end_at": "2026-02-15T18:00:00+09:00"
+     }'
+   ```
+
+3. **세션 로그 조회**
+   - `GET /api/v1/session-logs` (관리자)
+   - `GET /api/v1/session-logs/reservation/{id}`
+
+### 상세 문서
+
+- [설계 문서](docs/SESSION_SCHEDULER_DESIGN.md)
+- [사용 가이드](docs/SESSION_SCHEDULER_USAGE.md)
+- [구현 보고서](docs/SESSION_SCHEDULER_IMPLEMENTATION.md)
+
+---
+
 ## API Documentation
 
 서버 실행 후:
@@ -125,6 +189,8 @@ Docker Compose는 `backend/.env`를 컨테이너에 넘기므로, 테스트 스�
 | DELETE | `/api/v1/reservations/{id}`        | 예약 취소           |
 | GET    | `/api/v1/dashboard/timeline`       | 타임라인 뷰         |
 | GET    | `/api/v1/dashboard/status`         | 서버 현재 상태      |
+| GET    | `/api/v1/session-logs/`            | 세션 로그 목록 (admin) |
+| GET    | `/api/v1/session-logs/reservation/{id}` | 예약 세션 로그 |
 
 ---
 
@@ -133,7 +199,10 @@ Docker Compose는 `backend/.env`를 컨테이너에 넘기므로, 테스트 스�
 ```
 server-reservation/
 ├── docs/
-│   └── ARCHITECTURE.md          # 상세 설계 문서
+│   ├── ARCHITECTURE.md                      # 상세 설계 문서
+│   ├── SESSION_SCHEDULER_DESIGN.md          # 세션 스케줄러 설계
+│   ├── SESSION_SCHEDULER_USAGE.md           # 세션 스케줄러 사용 가이드
+│   └── SESSION_SCHEDULER_IMPLEMENTATION.md  # 세션 스케줄러 구현 보고서
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI entry point
@@ -145,6 +214,8 @@ server-reservation/
 │   │   │   ├── deps.py          # Auth dependencies
 │   │   │   └── v1/              # API v1 routers
 │   │   ├── services/            # Business logic
+│   │   │   ├── session_manager.py      # 계정 잠금/해제, 프로세스 관리
+│   │   │   └── session_scheduler.py    # 예약 기반 세션 스케줄링
 │   │   └── core/                # Security, exceptions
 │   ├── alembic/                 # DB migrations
 │   ├── requirements.txt

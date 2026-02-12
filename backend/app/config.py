@@ -1,8 +1,8 @@
 import os
-
-from pydantic_settings import BaseSettings
-from pydantic import Field, computed_field, model_validator
 from functools import lru_cache
+
+from pydantic import Field, computed_field, model_validator
+from pydantic_settings import BaseSettings
 
 # backend 루트 (local: .../backend, Docker: /app)
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/server_reservation"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/server_reservation"
+    )
 
     # JWT
     JWT_SECRET_KEY: str = "change-me-in-production-use-a-long-random-string"
@@ -62,6 +64,9 @@ class Settings(BaseSettings):
     # 최초 관리자 시드 (설정 시 앱 기동 시 admin 0명이면 이 계정으로 생성)
     ADMIN_EMAIL: str = ""
     ADMIN_PASSWORD: str = ""
+
+    # 예약 이벤트 프로세스 (세션 스케줄러): WAS 서버에서는 true, 로컬 개발에서는 false 권장
+    RESERVATION_EVENT_PROCESS_ENABLED: str = "false"
 
     model_config = {
         "env_file": ".env",
