@@ -35,6 +35,7 @@ export default function ServersPage() {
     message?: string | null;
     usermod_ok: boolean;
     pkill_ok: boolean;
+    teleport_ok: boolean;
   } | null>(null);
   const [permCheckingId, setPermCheckingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -210,6 +211,7 @@ export default function ServersPage() {
         message: res.data.message ?? undefined,
         usermod_ok: res.data.usermod_ok,
         pkill_ok: res.data.pkill_ok,
+        teleport_ok: res.data.teleport_ok,
       });
     } catch {
       setPermResult({
@@ -218,6 +220,7 @@ export default function ServersPage() {
         message: "권한 확인 요청 실패",
         usermod_ok: false,
         pkill_ok: false,
+        teleport_ok: false,
       });
     } finally {
       setPermCheckingId(null);
@@ -376,7 +379,7 @@ export default function ServersPage() {
                               }}
                               onClick={() => handleCheckPermissions(r.id)}
                               disabled={permCheckingId === r.id}
-                              title="SSH 사용자의 usermod, pkill 실행 권한 확인"
+                              title="SSH 사용자의 usermod, pkill, teleport 실행 권한 확인"
                             >
                               {permCheckingId === r.id
                                 ? "확인 중..."
@@ -434,8 +437,8 @@ export default function ServersPage() {
               <section className="servers-permission-section">
                 <h3 className="servers-permission-heading">권한 확인 결과</h3>
                 <p className="feedback-desc">
-                  아래에서 「권한 확인」 버튼으로 확인한 SSH 사용자(usermod, pkill)
-                  실행 권한 결과를 확인할 수 있습니다.
+                  아래에서 「권한 확인」 버튼으로 확인한 SSH 사용자(usermod, pkill,
+                  teleport) 실행 권한 결과를 확인할 수 있습니다.
                 </p>
                 {permResult ? (
                   <div
@@ -471,6 +474,16 @@ export default function ServersPage() {
                         <li>
                           pkill (프로세스 종료):{" "}
                           {permResult.pkill_ok ? (
+                            <span className="servers-perm-ok">✓ 권한 있음</span>
+                          ) : (
+                            <span className="servers-perm-fail">
+                              ✗ 권한 없음
+                            </span>
+                          )}
+                        </li>
+                        <li>
+                          teleport:{" "}
+                          {permResult.teleport_ok ? (
                             <span className="servers-perm-ok">✓ 권한 있음</span>
                           ) : (
                             <span className="servers-perm-fail">

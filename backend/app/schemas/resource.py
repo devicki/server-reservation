@@ -57,12 +57,13 @@ class ResourceTestConnectionResponse(BaseModel):
 
 
 class ResourcePermissionCheckResponse(BaseModel):
-    """SSH 사용자의 usermod, pkill 실행 권한 확인 결과."""
+    """SSH 사용자의 usermod, pkill, teleport 실행 권한 확인 결과."""
 
     ok: bool
     message: str | None = None
     usermod_ok: bool = False
     pkill_ok: bool = False
+    teleport_ok: bool = False
 
 
 class RemoteUserItem(BaseModel):

@@ -202,26 +202,36 @@ async def test_connection(
 _USERMOD_TEST_USER = "__permcheck_nonexistent_xyz__"
 
 
-def _parse_permission_check(stdout: str, stderr: str) -> tuple[bool, bool]:
-    """Parse output of sudo -n usermod -L and sudo -n pkill.
-    usermod: Permission denied / cannot lock / password / not in sudoers (in usermod section only) → no permission.
-    'does not exist' or 'unknown user' in usermod section → we have permission.
-    pkill: in pkill section only, password / not in sudoers → no permission; pkill_exit:0 → permission ok.
-    Split by line containing 'usermod_exit:' so output before it = usermod section, after = pkill section.
+def _parse_permission_check(stdout: str, stderr: str) -> tuple[bool, bool, bool]:
+    """Parse output of sudo -n usermod -L, sudo -n pkill, teleport version.
+    Sections split by usermod_exit:, pkill_exit:, teleport_exit: lines.
+    Returns (usermod_ok, pkill_ok, teleport_ok).
     """
     combined = ((stdout or "") + "\n" + (stderr or "")).lower()
     lines = combined.splitlines()
-    usermod_end = -1
+    usermod_end = pkill_end = teleport_end = -1
     for i, line in enumerate(lines):
         if re.search(r"usermod_exit:\d+", line):
             usermod_end = i
+        elif re.search(r"pkill_exit:\d+", line):
+            pkill_end = i
+        elif re.search(r"teleport_exit:\d+", line):
+            teleport_end = i
             break
     if usermod_end >= 0:
         usermod_section = "\n".join(lines[: usermod_end + 1])
-        pkill_section = "\n".join(lines[usermod_end + 1 :])
     else:
         usermod_section = combined
+    start_pkill = usermod_end + 1 if usermod_end >= 0 else 0
+    if pkill_end >= 0:
+        pkill_section = "\n".join(lines[start_pkill : pkill_end + 1])
+    else:
         pkill_section = ""
+    start_teleport = pkill_end + 1 if pkill_end >= 0 else 0
+    if teleport_end >= 0:
+        teleport_section = "\n".join(lines[start_teleport : teleport_end + 1])
+    else:
+        teleport_section = ""
 
     usermod_denied = (
         "permission denied" in usermod_section
@@ -246,7 +256,14 @@ def _parse_permission_check(stdout: str, stderr: str) -> tuple[bool, bool]:
         or ("sudo:" in pkill_section and "is not in the sudoers" in pkill_section)
     )
     pkill_ok = not pkill_denied and bool(re.search(r"pkill_exit:0\b", pkill_section))
-    return usermod_ok, pkill_ok
+
+    teleport_denied = (
+        "password" in teleport_section
+        or "not in sudoers" in teleport_section
+        or ("sudo:" in teleport_section and "is not in the sudoers" in teleport_section)
+    )
+    teleport_ok = not teleport_denied and bool(re.search(r"teleport_exit:0\b", teleport_section))
+    return usermod_ok, pkill_ok, teleport_ok
 
 
 @router.post(
@@ -273,12 +290,13 @@ async def check_permissions(
             message="Server has no host, SSH username, or private key configured.",
             usermod_ok=False,
             pkill_ok=False,
+            teleport_ok=False,
         )
-    # 다른 사용자 비활성화/프로세스 종료 권한: sudo로 실행 가능한지 확인 (sudo -n = 비밀번호 없이).
-    # usermod -L: 존재하지 않는 사용자에 대해 잠금 시도 → 권한 있으면 "does not exist", 없으면 Permission denied/cannot lock/sudo 거부.
+    # 다른 사용자 비활성화/프로세스 종료/teleport 권한: sudo로 실행 가능한지 확인 (sudo -n = 비밀번호 없이).
     usermod_cmd = f"sudo -n usermod -L {_USERMOD_TEST_USER} 2>&1; echo usermod_exit:$?"
     pkill_cmd = "sudo -n pkill -h 2>&1; echo pkill_exit:$?"
-    cmd = f"({usermod_cmd}); ({pkill_cmd})"
+    teleport_cmd = "teleport version 2>&1; echo teleport_exit:$?"
+    cmd = f"({usermod_cmd}); ({pkill_cmd}); ({teleport_cmd})"
     run_result = await asyncio.to_thread(
         run_command,
         resource.host,
@@ -294,8 +312,9 @@ async def check_permissions(
             message=run_result.message,
             usermod_ok=False,
             pkill_ok=False,
+            teleport_ok=False,
         )
-    usermod_ok, pkill_ok = _parse_permission_check(
+    usermod_ok, pkill_ok, teleport_ok = _parse_permission_check(
         run_result.stdout or "", run_result.stderr or ""
     )
     return ResourcePermissionCheckResponse(
@@ -303,6 +322,7 @@ async def check_permissions(
         message=None,
         usermod_ok=usermod_ok,
         pkill_ok=pkill_ok,
+        teleport_ok=teleport_ok,
     )
 
 

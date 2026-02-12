@@ -139,6 +139,7 @@ export const resourcesAPI = {
       message?: string | null;
       usermod_ok: boolean;
       pkill_ok: boolean;
+      teleport_ok: boolean;
     }>(`/resources/${id}/check-permissions`),
   getRemoteUsers: (id: string) =>
     api.get<{ items: { username: string }[] }>(`/resources/${id}/remote-users`),
