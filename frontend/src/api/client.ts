@@ -80,14 +80,50 @@ export const usersAPI = {
 };
 
 // ─── Resources ─────────────────────────────────────────────
+export interface ResourceItem {
+  id: string;
+  name: string;
+  description: string | null;
+  capacity: number | null;
+  is_active: boolean;
+  host: string | null;
+  ssh_port: number;
+  ssh_username: string | null;
+  ssh_private_key?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const resourcesAPI = {
-  list: () => api.get('/resources/'),
-  get: (id: string) => api.get(`/resources/${id}`),
-  create: (data: { name: string; description?: string; capacity?: number }) =>
-    api.post('/resources/', data),
-  update: (id: string, data: Record<string, unknown>) =>
-    api.put(`/resources/${id}`, data),
+  list: (params?: { is_active?: boolean; include_inactive?: boolean }) =>
+    api.get<{ items: ResourceItem[]; total: number }>('/resources/', { params }),
+  get: (id: string) => api.get<ResourceItem>(`/resources/${id}`),
+  create: (data: {
+    name: string;
+    description?: string;
+    capacity?: number;
+    host?: string;
+    ssh_port?: number;
+    ssh_username?: string;
+    ssh_private_key?: string;
+  }) => api.post('/resources/', data),
+  update: (
+    id: string,
+    data: {
+      name: string;
+      description?: string;
+      capacity?: number;
+      host?: string;
+      ssh_port?: number;
+      ssh_username?: string;
+      ssh_private_key?: string;
+    }
+  ) => api.put(`/resources/${id}`, data),
   delete: (id: string) => api.delete(`/resources/${id}`),
+  testConnection: (id: string) =>
+    api.post<{ ok: boolean; message: string; stdout?: string; stderr?: string }>(
+      `/resources/${id}/test-connection`
+    ),
 };
 
 // ─── Reservations ──────────────────────────────────────────

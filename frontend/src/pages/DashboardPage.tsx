@@ -174,7 +174,10 @@ export default function DashboardPage() {
         <div className="header-right">
           <Link to="/feedback" className="header-link">의견 게시판</Link>
           {user?.role === 'admin' && (
-            <Link to="/users" className="header-link">사용자 관리</Link>
+            <>
+              <Link to="/servers" className="header-link">서버 관리</Link>
+              <Link to="/users" className="header-link">사용자 관리</Link>
+            </>
           )}
           <span className="user-info">
             {user?.name}

@@ -18,6 +18,10 @@ class ServerResource(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    host: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ssh_port: Mapped[int] = mapped_column(Integer, nullable=False, default=22)
+    ssh_username: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    ssh_private_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
