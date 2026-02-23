@@ -1,5 +1,6 @@
 """Session Scheduler - 예약 시작/종료 시점에 자동으로 세션 활성화/비활성화"""
 import logging
+import uuid
 from datetime import datetime, timezone
 
 from app.config import get_settings
@@ -76,6 +77,24 @@ class SessionScheduler:
         result = await db.execute(stmt)
         log = result.scalar_one_or_none()
         return log is not None
+
+    @staticmethod
+    async def get_event_logged_reservation_ids(
+        db: AsyncSession,
+        reservation_ids: list[uuid.UUID],
+        event_type: SessionEventType,
+    ) -> set[uuid.UUID]:
+        """
+        여러 예약에 대해 이미 로깅된 이벤트가 있는 예약 ID 집합 반환 (배치 조회, N회 쿼리 → 1회).
+        """
+        if not reservation_ids:
+            return set()
+        stmt = select(ReservationSessionLog.reservation_id).where(
+            ReservationSessionLog.reservation_id.in_(reservation_ids),
+            ReservationSessionLog.event_type == event_type,
+        )
+        result = await db.execute(stmt)
+        return {row[0] for row in result.all()}
 
     @staticmethod
     async def log_event(
@@ -285,14 +304,13 @@ class SessionScheduler:
                 )
                 result = await db.execute(starting_stmt)
                 starting_reservations = result.scalars().all()
+                starting_ids = [r.id for r in starting_reservations]
+                already_activated = await SessionScheduler.get_event_logged_reservation_ids(
+                    db, starting_ids, SessionEventType.ACTIVATED
+                )
 
                 for reservation in starting_reservations:
-                    # 이미 활성화되었는지 확인 (중복 방지)
-                    if await SessionScheduler.has_event_logged(
-                        db,
-                        reservation.id,
-                        SessionEventType.ACTIVATED
-                    ):
+                    if reservation.id in already_activated:
                         logger.debug(f"Reservation {reservation.id} already activated, skipping")
                         continue
 
@@ -339,28 +357,30 @@ class SessionScheduler:
                 )
                 result = await db.execute(ending_stmt)
                 ending_reservations = result.scalars().all()
+                ending_ids = [r.id for r in ending_reservations]
+                already_deactivated = await SessionScheduler.get_event_logged_reservation_ids(
+                    db, ending_ids, SessionEventType.DEACTIVATED
+                )
 
                 for reservation in ending_reservations:
-                    # 이미 비활성화되었는지 확인 (중복 방지)
-                    if await SessionScheduler.has_event_logged(
-                        db,
-                        reservation.id,
-                        SessionEventType.DEACTIVATED
-                    ):
+                    if reservation.id in already_deactivated:
                         logger.debug(f"Reservation {reservation.id} already deactivated, skipping")
                         continue
 
                     try:
                         deactivation_result = await SessionScheduler.deactivate_reservation(db, reservation)
-                        
-                        # 로그 기록
+
+                        if deactivation_result["success"]:
+                            reservation.status = ReservationStatus.COMPLETED
+
+                        # 로그 기록 (status 업데이트와 함께 한 번에 commit)
                         await SessionScheduler.log_event(
                             db,
                             reservation.id,
                             SessionEventType.DEACTIVATED if deactivation_result["success"] else SessionEventType.ERROR,
                             deactivation_result
                         )
-                        
+
                         summary["deactivated"].append({
                             "reservation_id": str(reservation.id),
                             "success": deactivation_result["success"]

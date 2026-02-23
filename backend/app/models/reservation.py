@@ -20,6 +20,7 @@ from app.database import Base
 class ReservationStatus(str, enum.Enum):
     ACTIVE = "active"
     CANCELED = "canceled"
+    COMPLETED = "completed"
 
 
 class Reservation(Base):
