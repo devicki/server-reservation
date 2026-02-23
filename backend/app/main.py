@@ -1,10 +1,12 @@
 import logging
+import os
 from contextlib import asynccontextmanager
+from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
@@ -44,11 +46,30 @@ logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
-# basicConfig로 만든 핸들러에 KST 포매터 적용
 _log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 _date_fmt = "%Y-%m-%d %H:%M:%S"
+kst_fmt = KSTFormatter(_log_fmt, _date_fmt)
 for h in logging.root.handlers:
-    h.setFormatter(KSTFormatter(_log_fmt, _date_fmt))
+    h.setFormatter(kst_fmt)
+
+# 에러 전용 로그 파일 (ERROR 이상만 기록, 일 단위 로테이션, 60일 보관 후 삭제)
+if getattr(settings, "LOG_ERROR_FILE", ""):
+    log_path = settings.LOG_ERROR_FILE
+    log_dir = os.path.dirname(log_path)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+    file_handler = TimedRotatingFileHandler(
+        log_path,
+        when="midnight",
+        interval=1,
+        backupCount=60,  # 약 2달(60일) 보관 후 자동 삭제
+        encoding="utf-8",
+    )
+    file_handler.suffix = "%Y-%m-%d"
+    file_handler.setLevel(logging.ERROR)
+    file_handler.setFormatter(kst_fmt)
+    logging.root.addHandler(file_handler)
+
 logger = logging.getLogger(__name__)
 
 # Scheduler instance (global)
@@ -153,6 +174,21 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """예상치 못한 예외(HTTPException 아님)만 에러 로그에 기록한 뒤 재발생."""
+    if not isinstance(exc, HTTPException):
+        logger.error(
+            "Unhandled exception: %s %s - %s",
+            request.method,
+            request.url.path,
+            exc,
+            exc_info=True,
+        )
+    raise exc
+
 
 # CORS middleware
 app.add_middleware(

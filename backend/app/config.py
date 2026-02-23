@@ -32,10 +32,15 @@ class Settings(BaseSettings):
     GOOGLE_CALENDAR_ENABLED: bool = False
 
     @model_validator(mode="after")
-    def resolve_google_service_account_path(self):
+    def resolve_paths(self):
         path = (self.GOOGLE_SERVICE_ACCOUNT_FILE or "").strip()
         if path and not os.path.isabs(path):
             self.GOOGLE_SERVICE_ACCOUNT_FILE = os.path.normpath(
+                os.path.join(BACKEND_ROOT, path)
+            )
+        path = (self.LOG_ERROR_FILE or "").strip()
+        if path and not os.path.isabs(path):
+            self.LOG_ERROR_FILE = os.path.normpath(
                 os.path.join(BACKEND_ROOT, path)
             )
         return self
@@ -67,6 +72,9 @@ class Settings(BaseSettings):
 
     # 예약 이벤트 프로세스 (세션 스케줄러): WAS 서버에서는 true, 로컬 개발에서는 false 권장
     RESERVATION_EVENT_PROCESS_ENABLED: str = "false"
+
+    # 에러 로그 파일 (빈 문자열이면 파일 미사용, 콘솔만). 상대 경로 시 backend 루트 기준
+    LOG_ERROR_FILE: str = "logs/error.log"
 
     model_config = {
         "env_file": ".env",
