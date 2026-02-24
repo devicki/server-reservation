@@ -6,6 +6,38 @@
 
 ## 2026-02-24
 
+### CUDA Toolkit 버전 업그레이드 (v12.0 → v12.8)
+
+변경 내용: 기존 CUDA SDK 12.0 버전을 최신 요구 사양인 12.8로 업그레이드 완료.
+
+작업 목적: H100 GPU 성능 최적화 및 최신 프레임워크(vLLM 등) 호환성 확보.
+
+주요 변경 사항:
+
+NVIDIA 공식 저장소(cuda-keyring) 등록 및 업데이트.
+
+cuda-toolkit-12-8 패키지 설치.
+
+시스템 환경 변수(PATH, LD_LIBRARY_PATH) 경로 수정 적용.
+
+확인 방법: nvcc --version 명령어를 통해 release 12.8 확인.
+
+### GPU 프로파일링 권한 개방 (Non-root User)
+
+변경 내용: 일반 계정에서도 GPU 성능 분석 도구(nvprof, ncu)를 사용할 수 있도록 커널 모듈 설정 변경.
+
+작업 목적: 개발자 및 분석가가 루트 권한 없이 GPU 커널 성능 및 메모리 대역폭을 분석할 수 있는 환경 제공.
+
+적용 사항:
+
+NVreg_RestrictProfilingToAdminUsers=0 옵션 적용.
+
+/etc/modprobe.d/nvidia-profiler.conf 설정을 통한 영구적 권한 부여.
+
+도구 경로: /usr/local/cuda-12.8/bin/ncu 및 nvprof 사용 가능.
+
+---
+
 ### 릴리즈 노트 뷰어
 
 - MD 파일을 볼 수 있는 뷰어 페이지 추가 (`/release-notes`)
