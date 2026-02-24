@@ -232,24 +232,32 @@
 
 .feedback-comment-form {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
   margin-top: 0.5rem;
 }
 
-.feedback-comment-input {
-  flex: 1;
+.feedback-comment-textarea {
+  width: 100%;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  font-family: inherit;
   font-size: 0.95rem;
   background: var(--color-bg);
   color: var(--color-text);
+  resize: vertical;
+  min-height: 80px;
 }
 
-.feedback-comment-input:focus {
+.feedback-comment-textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+.feedback-comment-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .btn-sm {

@@ -178,8 +178,7 @@ export default function FeedbackPage() {
                       onSubmit={(e) => handleCommentSubmit(fb.id, e)}
                       className="feedback-comment-form"
                     >
-                      <input
-                        type="text"
+                      <textarea
                         value={commentContent[fb.id] ?? ''}
                         onChange={(e) =>
                           setCommentContent((prev) => ({
@@ -189,15 +188,18 @@ export default function FeedbackPage() {
                         }
                         placeholder="댓글을 입력하세요 (최대 1000자)"
                         maxLength={1000}
-                        className="feedback-comment-input"
+                        rows={3}
+                        className="feedback-comment-textarea"
                       />
-                      <button
-                        type="submit"
-                        className="btn btn-primary btn-sm"
-                        disabled={commentLoading[fb.id] || !(commentContent[fb.id]?.trim())}
-                      >
-                        {commentLoading[fb.id] ? '등록 중...' : '댓글 등록'}
-                      </button>
+                      <div className="feedback-comment-actions">
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-sm"
+                          disabled={commentLoading[fb.id] || !(commentContent[fb.id]?.trim())}
+                        >
+                          {commentLoading[fb.id] ? '등록 중...' : '댓글 등록'}
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </li>
