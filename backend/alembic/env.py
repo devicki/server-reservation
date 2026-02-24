@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from logging.config import fileConfig
 
 from alembic import context
@@ -60,7 +61,17 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    asyncio.run(run_async_migrations())
+    try:
+        asyncio.run(run_async_migrations())
+    except OSError as e:
+        url = config.get_main_option("sqlalchemy.url", "")
+        if "5432" in url and "15433" not in url:
+            print("\n[알림] PostgreSQL 연결 실패: DB가 실행 중이 아니거나 호스트/포트가 다릅니다.", file=sys.stderr)
+            print("  - 로컬 PostgreSQL: 서비스 실행 후 재시도 (예: systemctl start postgresql)", file=sys.stderr)
+            print("  - Docker로 DB만 사용 시: docker compose up -d db 후 backend/.env 에 다음 설정:", file=sys.stderr)
+            print("    DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:15433/server_reservation", file=sys.stderr)
+            print("", file=sys.stderr)
+        sys.exit(1)
 
 
 if context.is_offline_mode():

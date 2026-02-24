@@ -1,18 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import type { FeedbackItem } from '../api/client';
 import { feedbackAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import './FeedbackPage.css';
-import './FeedbackPage.css';
-import './FeedbackPage.css';
-
-interface FeedbackItem {
-  id: string;
-  user_id: string;
-  user_name: string;
-  content: string;
-  created_at: string;
-}
 
 export default function FeedbackPage() {
   const { user, logout } = useAuth();
@@ -22,6 +13,9 @@ export default function FeedbackPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [commentContent, setCommentContent] = useState<Record<string, string>>({});
+  const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
+  const [reactionLoading, setReactionLoading] = useState<Record<string, boolean>>({});
 
   const fetchList = async () => {
     setLoading(true);
@@ -57,6 +51,45 @@ export default function FeedbackPage() {
       setError(message || '의견 등록에 실패했습니다.');
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  const handleCommentSubmit = async (feedbackId: string, e: React.FormEvent) => {
+    e.preventDefault();
+    const text = commentContent[feedbackId]?.trim();
+    if (!text) return;
+    setCommentLoading((prev) => ({ ...prev, [feedbackId]: true }));
+    try {
+      const res = await feedbackAPI.createComment(feedbackId, { content: text });
+      setItems((prev) =>
+        prev.map((fb) => {
+          if (fb.id !== feedbackId) return fb;
+          return {
+            ...fb,
+            comment_count: fb.comment_count + 1,
+            comments: [...fb.comments, res.data],
+          };
+        })
+      );
+      setCommentContent((prev) => ({ ...prev, [feedbackId]: '' }));
+    } catch {
+      setError('댓글 등록에 실패했습니다.');
+    } finally {
+      setCommentLoading((prev) => ({ ...prev, [feedbackId]: false }));
+    }
+  };
+
+  const handleToggleReaction = async (feedbackId: string) => {
+    setReactionLoading((prev) => ({ ...prev, [feedbackId]: true }));
+    try {
+      const res = await feedbackAPI.toggleReaction(feedbackId);
+      setItems((prev) =>
+        prev.map((fb) => (fb.id === feedbackId ? res.data : fb))
+      );
+    } catch {
+      setError('반응을 적용할 수 없습니다.');
+    } finally {
+      setReactionLoading((prev) => ({ ...prev, [feedbackId]: false }));
     }
   };
 
@@ -136,6 +169,55 @@ export default function FeedbackPage() {
                     <span className="feedback-item-date">{formatDate(fb.created_at)}</span>
                   </div>
                   <p className="feedback-item-content">{fb.content}</p>
+                  <div className="feedback-item-actions">
+                    <button
+                      type="button"
+                      className={`feedback-reaction-btn ${fb.user_reaction === 'like' ? 'active' : ''}`}
+                      onClick={() => handleToggleReaction(fb.id)}
+                      disabled={reactionLoading[fb.id]}
+                      title="좋아요"
+                    >
+                      👍 {fb.reaction_counts?.like ?? 0}
+                      {reactionLoading[fb.id] ? ' ...' : ''}
+                    </button>
+                    <span className="feedback-comment-count">💬 댓글 {fb.comment_count ?? 0}개</span>
+                  </div>
+                  <div className="feedback-comments">
+                    {fb.comments?.map((c) => (
+                      <div key={c.id} className="feedback-comment">
+                        <div className="feedback-comment-meta">
+                          <span className="feedback-comment-author">{c.user_name}</span>
+                          <span className="feedback-comment-date">{formatDate(c.created_at)}</span>
+                        </div>
+                        <p className="feedback-comment-content">{c.content}</p>
+                      </div>
+                    ))}
+                    <form
+                      onSubmit={(e) => handleCommentSubmit(fb.id, e)}
+                      className="feedback-comment-form"
+                    >
+                      <input
+                        type="text"
+                        value={commentContent[fb.id] ?? ''}
+                        onChange={(e) =>
+                          setCommentContent((prev) => ({
+                            ...prev,
+                            [fb.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="댓글을 입력하세요 (최대 1000자)"
+                        maxLength={1000}
+                        className="feedback-comment-input"
+                      />
+                      <button
+                        type="submit"
+                        className="btn btn-primary btn-sm"
+                        disabled={commentLoading[fb.id] || !(commentContent[fb.id]?.trim())}
+                      >
+                        {commentLoading[fb.id] ? '등록 중...' : '댓글 등록'}
+                      </button>
+                    </form>
+                  </div>
                 </li>
               ))}
             </ul>

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,3 +29,14 @@ class Feedback(Base):
     )
 
     user = relationship("User", back_populates="feedback", lazy="selectin")
+    comments = relationship(
+        "FeedbackComment",
+        back_populates="feedback",
+        lazy="selectin",
+        order_by="FeedbackComment.created_at",
+    )
+    reactions = relationship(
+        "FeedbackReaction",
+        back_populates="feedback",
+        lazy="selectin",
+    )
