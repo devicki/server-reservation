@@ -22,6 +22,21 @@ cuda-toolkit-12-8 패키지 설치.
 
 확인 방법: nvcc --version 명령어를 통해 release 12.8 확인.
 
+\*\* 기존 cuda 12.0 에서 12.8 로 업그레이드 진행하면서,
+환경변수의 수정이 필요.
+
+전역으로 적용하기 위해, /etc/profile.d/cuda.sh 파일을 생성하여 CUDA 경로를 추가하는 방식으로 변경.
+사용자 로그인시 자동으로 적용되도록 설정.
+
+# 새로운 설정 파일 생성 (모든 사용자용)
+
+echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' | sudo tee /etc/profile.d/cuda.sh
+echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH' | sudo tee -a /etc/profile.d/cuda.sh
+
+# 실행 권한 부여
+
+sudo chmod +x /etc/profile.d/cuda.sh
+
 ### GPU 프로파일링 권한 개방 (Non-root User)
 
 변경 내용: 일반 계정에서도 GPU 성능 분석 도구(nvprof, ncu)를 사용할 수 있도록 커널 모듈 설정 변경.
