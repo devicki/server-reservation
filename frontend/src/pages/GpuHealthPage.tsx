@@ -6,6 +6,7 @@ import {
   type ServerGpuHealth,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
 
 function formatMib(mib: number | null): string {
   if (mib == null) return '—';
@@ -82,44 +83,7 @@ export default function GpuHealthPage() {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h1>GPU Server Reservation</h1>
-        </div>
-        <div className="header-right">
-          <Link to="/" className="header-link">
-            예약 캘린더
-          </Link>
-          <Link to="/gpu-health" className="header-link header-link-active">
-            GPU 헬스
-          </Link>
-          <Link to="/feedback" className="header-link">
-            의견 게시판
-          </Link>
-          {user?.role === 'admin' && (
-            <>
-              <Link to="/servers" className="header-link">
-                서버 관리
-              </Link>
-              <Link to="/users" className="header-link">
-                사용자 관리
-              </Link>
-            </>
-          )}
-          <span className="user-info">
-            {user?.name}
-            <span
-              className={`role-badge role-${user?.role ?? 'user'}`}
-              title="권한"
-            >
-              {user?.role === 'admin' ? '관리자' : '일반 사용자'}
-            </span>
-          </span>
-          <button className="btn btn-secondary" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
+      <Header />
 
       <div className="gpu-health-content">
         <div className="gpu-health-toolbar">

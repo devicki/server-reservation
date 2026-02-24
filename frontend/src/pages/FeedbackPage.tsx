@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { FeedbackItem } from '../api/client';
 import { feedbackAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
 import './FeedbackPage.css';
 
 export default function FeedbackPage() {
@@ -103,26 +104,7 @@ export default function FeedbackPage() {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h1>GPU Server Reservation</h1>
-        </div>
-        <div className="header-right">
-          <Link to="/" className="header-link">예약</Link>
-          {user?.role === 'admin' && (
-            <Link to="/users" className="header-link">사용자 관리</Link>
-          )}
-          <span className="user-info">
-            {user?.name}
-            <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">
-              {user?.role === 'admin' ? '관리자' : '일반 사용자'}
-            </span>
-          </span>
-          <button className="btn btn-secondary" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
+      <Header />
 
       <div className="feedback-content">
         <section className="feedback-section">
