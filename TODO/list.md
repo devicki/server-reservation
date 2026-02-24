@@ -33,17 +33,3 @@ llm목록과 띄어주기 기능
 - vRAM 의 할당 % 에 따라 동시 접속 허용
 
 ////////////////////////
-
-/////////////////////
-
-의견 게시판
-
-nvprof와 ncu가 설치되어있으면 좋겠고 또한, Non-root user에게 profiling권한을 주셨으면 좋겠습니다.
-
-수행 요 명령:
-modprobe nvidia NVreg_RestrictProfilingToAdminUsers=0
-
-관련 링크:
-https://forums.developer.nvidia.com/t/nvprof-warning-the-user-does-not-have-permission-to-profile-on-the-target-device/72374
-
-cuda sdk의 버전이 12.0으로 보입니다. 12.8 이상 혹은 13.1 이상의 버전으로 설치를 부탁드립니다.
