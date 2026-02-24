@@ -12,7 +12,6 @@ export default function Header() {
           <NavLink to="/" className="header-link" end>예약</NavLink>
           <NavLink to="/gpu-health" className="header-link">GPU 헬스</NavLink>
           <NavLink to="/feedback" className="header-link">의견 게시판</NavLink>
-          <NavLink to="/release-notes" className="header-link">릴리즈 노트</NavLink>
           {user?.role === 'admin' && (
             <>
               <NavLink to="/servers" className="header-link">서버 관리</NavLink>
@@ -23,6 +22,7 @@ export default function Header() {
         </nav>
       </div>
       <div className="header-right">
+        <NavLink to="/release-notes" className="header-link">릴리즈 노트</NavLink>
         <span className="user-info">
           {user?.name}
           <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">
