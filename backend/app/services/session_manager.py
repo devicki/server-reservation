@@ -26,7 +26,10 @@ class SessionManager:
         server: ServerResource, account_name: str
     ) -> SessionOperationResult:
         """
-        사용자 계정 잠금 해제 (로그인 허용)
+        사용자 계정 잠금 해제 (로그인·SSH 허용)
+
+        usermod -U로 비밀번호 잠금 해제 후, usermod -s /bin/bash로 셸 복구하여
+        SSH 키 접근까지 허용합니다.
 
         Args:
             server: 대상 서버
@@ -42,7 +45,8 @@ class SessionManager:
                 details={"account": account_name},
             )
 
-        command = f"sudo usermod -U {account_name}"
+        # 잠금 해제 + 셸 복구 (SSH 키 접근 허용)
+        command = f"sudo usermod -U {account_name} && sudo usermod -s /bin/bash {account_name}"
 
         result = run_command(
             host=server.host,
@@ -59,7 +63,7 @@ class SessionManager:
             )
             return SessionOperationResult(
                 ok=True,
-                message=f"User '{account_name}' unlocked successfully",
+                message=f"User '{account_name}' unlocked (password + shell /bin/bash)",
                 details={"account": account_name, "stdout": result.stdout},
             )
         else:
@@ -75,7 +79,10 @@ class SessionManager:
     @staticmethod
     def lock_user(server: ServerResource, account_name: str) -> SessionOperationResult:
         """
-        사용자 계정 잠금 (로그인 차단)
+        사용자 계정 잠금 (로그인·SSH 차단)
+
+        usermod -L로 비밀번호 잠금 후, usermod -s /usr/sbin/nologin으로 셸을
+        nologin으로 바꿔 SSH 키 접근도 차단합니다.
 
         Args:
             server: 대상 서버
@@ -91,7 +98,8 @@ class SessionManager:
                 details={"account": account_name},
             )
 
-        command = f"sudo usermod -L {account_name}"
+        # 비밀번호 잠금 + 셸을 nologin으로 변경 (SSH 키 접근도 차단)
+        command = f"sudo usermod -L {account_name} && sudo usermod -s /usr/sbin/nologin {account_name}"
 
         result = run_command(
             host=server.host,
@@ -104,7 +112,7 @@ class SessionManager:
 
         if result.ok:
             logger.info(
-                f"Locked user account '{account_name}' on server '{server.name}'"
+                f"Locked user account '{account_name}' on server '{server.name}' (password + shell nologin)"
             )
             return SessionOperationResult(
                 ok=True,

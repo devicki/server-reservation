@@ -8,6 +8,7 @@ import GpuHealthPage from './pages/GpuHealthPage';
 import ServersPage from './pages/ServersPage';
 import UsersPage from './pages/UsersPage';
 import SessionLogsPage from './pages/SessionLogsPage';
+import ReleaseNotesPage from './pages/ReleaseNotesPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -122,6 +123,14 @@ export default function App() {
               <AdminRoute>
                 <SessionLogsPage />
               </AdminRoute>
+            }
+          />
+          <Route
+            path="/release-notes"
+            element={
+              <PrivateRoute>
+                <ReleaseNotesPage />
+              </PrivateRoute>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
