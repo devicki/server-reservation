@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usersAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
 
 interface UserItem {
   id: string;
@@ -72,26 +73,7 @@ export default function UsersPage() {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h1>GPU Server Reservation</h1>
-        </div>
-        <div className="header-right">
-          <Link to="/" className="header-link">예약</Link>
-          <Link to="/feedback" className="header-link">의견 게시판</Link>
-          <Link to="/servers" className="header-link">서버 관리</Link>
-          <Link to="/session-logs" className="header-link">세션 로그</Link>
-          <span className="user-info">
-            {user?.name}
-            <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">
-              {user?.role === 'admin' ? '관리자' : '일반 사용자'}
-            </span>
-          </span>
-          <button className="btn btn-secondary" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
+      <Header />
 
       <div className="feedback-content" style={{ maxWidth: '900px' }}>
         <section className="feedback-section">

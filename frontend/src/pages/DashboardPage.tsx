@@ -6,6 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { configAPI, dashboardAPI, resourcesAPI, reservationsAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
 import ReservationModal from '../components/ReservationModal';
 import ServerStatus from '../components/ServerStatus';
 
@@ -170,30 +171,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h1>GPU Server Reservation</h1>
-        </div>
-        <div className="header-right">
-          <Link to="/gpu-health" className="header-link">GPU 헬스</Link>
-          <Link to="/feedback" className="header-link">의견 게시판</Link>
-          {user?.role === 'admin' && (
-            <>
-              <Link to="/servers" className="header-link">서버 관리</Link>
-              <Link to="/users" className="header-link">사용자 관리</Link>
-            </>
-          )}
-          <span className="user-info">
-            {user?.name}
-            <span className={`role-badge role-${user?.role ?? 'user'}`} title="권한">
-              {user?.role === 'admin' ? '관리자' : '일반 사용자'}
-            </span>
-          </span>
-          <button className="btn btn-secondary" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
+      <Header />
 
       <div className="dashboard-content">
         <div className="sidebar">

@@ -169,10 +169,44 @@ export const reservationsAPI = {
 };
 
 // ─── Feedback (시스템 개선 의견) ─────────────────────────────
+export interface FeedbackCommentItem {
+  id: string;
+  feedback_id: string;
+  user_id: string;
+  user_name: string;
+  content: string;
+  created_at: string;
+}
+
+export interface FeedbackReactionSummary {
+  like: number;
+}
+
+export interface FeedbackItem {
+  id: string;
+  user_id: string;
+  user_name: string;
+  content: string;
+  created_at: string;
+  comment_count: number;
+  comments: FeedbackCommentItem[];
+  reaction_counts: FeedbackReactionSummary;
+  user_reaction: string | null;
+}
+
+export interface FeedbackListResponse {
+  items: FeedbackItem[];
+  total: number;
+}
+
 export const feedbackAPI = {
   list: (params?: { limit?: number; offset?: number }) =>
-    api.get('/feedback/', { params }),
-  create: (data: { content: string }) => api.post('/feedback/', data),
+    api.get<FeedbackListResponse>('/feedback/', { params }),
+  create: (data: { content: string }) => api.post<FeedbackItem>('/feedback/', data),
+  createComment: (feedbackId: string, data: { content: string }) =>
+    api.post<FeedbackCommentItem>(`/feedback/${feedbackId}/comments`, data),
+  toggleReaction: (feedbackId: string) =>
+    api.post<FeedbackItem>(`/feedback/${feedbackId}/reactions`),
 };
 
 // ─── Session Logs (Admin) ───────────────────────────────────
