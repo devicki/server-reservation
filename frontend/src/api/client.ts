@@ -224,8 +224,17 @@ export interface SessionLogItem {
 }
 
 export const sessionLogsAPI = {
-  list: (params?: { reservation_id?: string; limit?: number; offset?: number }) =>
-    api.get<SessionLogItem[]>('/session-logs/', { params }),
+  list: (params?: {
+    reservation_id?: string;
+    start_date?: string;
+    end_date?: string;
+    server_resource_id?: string;
+    reservation_title?: string;
+    user_id?: string;
+    event_type?: 'activated' | 'deactivated' | 'error';
+    limit?: number;
+    offset?: number;
+  }) => api.get<SessionLogItem[]>('/session-logs/', { params }),
 };
 
 // ─── Dashboard ─────────────────────────────────────────────

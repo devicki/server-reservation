@@ -1,5 +1,6 @@
 """Session logs API - 예약 세션 활성화/비활성화 로그 조회"""
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -10,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_current_admin
 from app.database import get_db
 from app.models.reservation import Reservation
-from app.models.reservation_session_log import ReservationSessionLog
+from app.models.reservation_session_log import ReservationSessionLog, SessionEventType
 from app.models.user import User
 from app.schemas.session_log import SessionLogResponse
 
@@ -45,22 +46,51 @@ async def list_session_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_admin)],  # Admin only
     reservation_id: uuid.UUID | None = Query(None, description="Filter by reservation ID"),
+    start_date: datetime | None = Query(None, description="Filter logs from this datetime (inclusive, ISO format)"),
+    end_date: datetime | None = Query(None, description="Filter logs until this datetime (inclusive, ISO format)"),
+    server_resource_id: uuid.UUID | None = Query(None, description="Filter by server (resource) ID"),
+    reservation_title: str | None = Query(None, description="Filter by reservation title (partial match)"),
+    user_id: uuid.UUID | None = Query(None, description="Filter by reserving user ID"),
+    event_type: SessionEventType | None = Query(None, description="Filter by event type (activated, deactivated, error)"),
     limit: int = Query(50, ge=1, le=100, description="Number of logs to return"),
     offset: int = Query(0, ge=0, description="Number of logs to skip"),
 ):
     """
     세션 로그 목록 조회 (관리자 전용)
-    
-    예약의 활성화/비활성화 이벤트 로그를 조회합니다.
-    """
-    conditions = []
-    if reservation_id:
-        conditions.append(ReservationSessionLog.reservation_id == reservation_id)
 
+    예약의 활성화/비활성화 이벤트 로그를 조회합니다.
+    일시, 서버, 예약 타이틀, 예약 사용자, 예약 ID, 이벤트 타입으로 필터링할 수 있습니다.
+    """
+    conditions_log = []
+    if reservation_id:
+        conditions_log.append(ReservationSessionLog.reservation_id == reservation_id)
+    if start_date:
+        conditions_log.append(ReservationSessionLog.created_at >= start_date)
+    if end_date:
+        conditions_log.append(ReservationSessionLog.created_at <= end_date)
+    if event_type:
+        conditions_log.append(ReservationSessionLog.event_type == event_type)
+
+    conditions_reservation = []
+    if server_resource_id:
+        conditions_reservation.append(Reservation.server_resource_id == server_resource_id)
+    if reservation_title and reservation_title.strip():
+        conditions_reservation.append(
+            Reservation.title.ilike(f"%{reservation_title.strip()}%")
+        )
+    if user_id:
+        conditions_reservation.append(Reservation.user_id == user_id)
+
+    need_join = len(conditions_reservation) > 0
+    stmt = select(ReservationSessionLog)
+    if need_join:
+        stmt = stmt.join(ReservationSessionLog.reservation)
+    if conditions_log:
+        stmt = stmt.where(*conditions_log)
+    if conditions_reservation:
+        stmt = stmt.where(*conditions_reservation)
     stmt = (
-        select(ReservationSessionLog)
-        .where(*conditions)
-        .options(
+        stmt.options(
             selectinload(ReservationSessionLog.reservation).selectinload(
                 Reservation.server_resource
             ),
