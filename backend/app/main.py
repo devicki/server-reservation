@@ -16,6 +16,7 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.reservations import router as reservations_router
 from app.api.v1.resources import router as resources_router
+from app.api.v1.serve_cases import router as serve_cases_router
 from app.api.v1.session_logs import router as session_logs_router
 from app.api.v1.users import router as users_router
 from app.config import get_settings
@@ -208,6 +209,7 @@ app.include_router(users_router, prefix=API_V1_PREFIX)
 app.include_router(reservations_router, prefix=API_V1_PREFIX)
 app.include_router(dashboard_router, prefix=API_V1_PREFIX)
 app.include_router(feedback_router, prefix=API_V1_PREFIX)
+app.include_router(serve_cases_router, prefix=API_V1_PREFIX)
 app.include_router(session_logs_router, prefix=API_V1_PREFIX)
 
 

@@ -51,6 +51,7 @@ class User(Base):
     # Relationships
     reservations = relationship("Reservation", back_populates="user", lazy="selectin")
     feedback = relationship("Feedback", back_populates="user", lazy="selectin")
+    serve_cases = relationship("ServeCase", back_populates="user", lazy="selectin")
     feedback_comments = relationship(
         "FeedbackComment", back_populates="user", lazy="selectin"
     )

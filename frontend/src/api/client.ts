@@ -237,6 +237,35 @@ export const sessionLogsAPI = {
   }) => api.get<SessionLogItem[]>('/session-logs/', { params }),
 };
 
+// ─── Serve Cases (LLM serve 사례 공유) ────────────────────────
+export interface ServeCaseItem {
+  id: string;
+  user_id: string;
+  user_name: string;
+  server_resource_id: string;
+  server_name: string;
+  model_name: string;
+  model_info: string | null;
+  serve_command: string;
+  resource_allocation: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export const serveCasesAPI = {
+  list: (params?: { limit?: number; offset?: number }) =>
+    api.get<{ items: ServeCaseItem[]; total: number }>('/serve-cases/', { params }),
+  get: (id: string) => api.get<ServeCaseItem>(`/serve-cases/${id}`),
+  create: (data: {
+    server_resource_id: string;
+    model_name: string;
+    model_info?: string | null;
+    serve_command: string;
+    resource_allocation?: string | null;
+    notes?: string | null;
+  }) => api.post<ServeCaseItem>('/serve-cases/', data),
+};
+
 // ─── Dashboard ─────────────────────────────────────────────
 export interface GpuInfo {
   index: number;
