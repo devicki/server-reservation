@@ -1,22 +1,22 @@
-import { Fragment, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { sessionLogsAPI, type SessionLogItem } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import Header from '../components/Header';
+import { Fragment, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { sessionLogsAPI, type SessionLogItem } from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
 
 const LIMIT = 50;
 const EVENT_LABEL: Record<string, string> = {
-  activated: '활성화',
-  deactivated: '비활성화',
-  error: '오류',
+  activated: "활성화",
+  deactivated: "비활성화",
+  error: "오류",
 };
 
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
-    return d.toLocaleString('ko-KR', {
-      dateStyle: 'short',
-      timeStyle: 'medium',
+    return d.toLocaleString("ko-KR", {
+      dateStyle: "short",
+      timeStyle: "medium",
       hour12: false,
     });
   } catch {
@@ -28,14 +28,14 @@ export default function SessionLogsPage() {
   const { user, logout } = useAuth();
   const [items, setItems] = useState<SessionLogItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [reservationIdFilter, setReservationIdFilter] = useState('');
+  const [error, setError] = useState("");
+  const [reservationIdFilter, setReservationIdFilter] = useState("");
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchList = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const res = await sessionLogsAPI.list({
         reservation_id: reservationIdFilter.trim() || undefined,
@@ -44,7 +44,7 @@ export default function SessionLogsPage() {
       });
       setItems(res.data);
     } catch {
-      setError('세션 로그를 불러올 수 없습니다.');
+      setError("세션 로그를 불러올 수 없습니다.");
       setItems([]);
     } finally {
       setLoading(false);
@@ -64,7 +64,7 @@ export default function SessionLogsPage() {
     <div className="dashboard">
       <Header />
 
-      <div className="feedback-content" style={{ maxWidth: '1100px' }}>
+      <div className="feedback-content" style={{ maxWidth: "1100px" }}>
         <section className="feedback-section">
           <h2>세션 로그</h2>
           <p className="feedback-desc">
@@ -77,11 +77,15 @@ export default function SessionLogsPage() {
               placeholder="예약 ID (UUID) 필터"
               value={reservationIdFilter}
               onChange={(e) => setReservationIdFilter(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+              onKeyDown={(e) => e.key === "Enter" && handleApplyFilter()}
               className="form-control"
-              style={{ maxWidth: '320px', marginRight: '0.5rem' }}
+              style={{ maxWidth: "320px", marginRight: "0.5rem" }}
             />
-            <button type="button" className="btn btn-primary" onClick={handleApplyFilter}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleApplyFilter}
+            >
               조회
             </button>
           </div>
@@ -96,7 +100,11 @@ export default function SessionLogsPage() {
                 <table className="users-table session-logs-table">
                   <thead>
                     <tr>
+                      <th>번호</th>
                       <th>일시</th>
+                      <th>서버</th>
+                      <th>Title</th>
+                      <th>사용자</th>
                       <th>예약 ID</th>
                       <th>이벤트</th>
                       <th>상세</th>
@@ -105,39 +113,74 @@ export default function SessionLogsPage() {
                   <tbody>
                     {items.length === 0 ? (
                       <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                        <td
+                          colSpan={8}
+                          style={{
+                            textAlign: "center",
+                            color: "var(--color-text-muted)",
+                          }}
+                        >
                           로그가 없습니다.
                         </td>
                       </tr>
                     ) : (
-                      items.map((log) => (
+                      items.map((log, index) => (
                         <Fragment key={log.id}>
                           <tr>
-                            <td className="session-log-date">{formatDate(log.created_at)}</td>
-                            <td className="session-log-reservation-id">{log.reservation_id}</td>
+                            <td className="session-log-no">
+                              {offset + index + 1}
+                            </td>
+                            <td className="session-log-date">
+                              {formatDate(log.created_at)}
+                            </td>
+                            <td className="session-log-server">
+                              {log.server_name ?? "-"}
+                            </td>
+                            <td className="session-log-title">
+                              {log.reservation_title ?? "-"}
+                            </td>
+                            <td className="session-log-user">
+                              {log.reservation_user_name ?? "-"}
+                            </td>
+                            <td className="session-log-reservation-id">
+                              {log.reservation_id}
+                            </td>
                             <td>
-                              <span className={`session-log-badge session-log-badge-${log.event_type}`}>
+                              <span
+                                className={`session-log-badge session-log-badge-${log.event_type}`}
+                              >
                                 {EVENT_LABEL[log.event_type] ?? log.event_type}
                               </span>
                             </td>
                             <td>
-                              {log.details && Object.keys(log.details).length > 0 ? (
+                              {log.details &&
+                              Object.keys(log.details).length > 0 ? (
                                 <button
                                   type="button"
                                   className="btn btn-secondary"
-                                  style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
-                                  onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                                  style={{
+                                    fontSize: "0.8rem",
+                                    padding: "0.25rem 0.5rem",
+                                  }}
+                                  onClick={() =>
+                                    setExpandedId(
+                                      expandedId === log.id ? null : log.id,
+                                    )
+                                  }
                                 >
-                                  {expandedId === log.id ? '접기' : '상세'}
+                                  {expandedId === log.id ? "접기" : "상세"}
                                 </button>
                               ) : (
-                                '-'
+                                "-"
                               )}
                             </td>
                           </tr>
                           {expandedId === log.id && log.details && (
                             <tr key={`${log.id}-detail`}>
-                              <td colSpan={4} className="session-log-details-cell">
+                              <td
+                                colSpan={8}
+                                className="session-log-details-cell"
+                              >
                                 <pre className="session-log-details-json">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>

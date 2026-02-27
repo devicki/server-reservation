@@ -218,6 +218,9 @@ export interface SessionLogItem {
   event_type: SessionEventType;
   details: Record<string, unknown> | null;
   created_at: string;
+  server_name: string | null;
+  reservation_title: string | null;
+  reservation_user_name: string | null;
 }
 
 export const sessionLogsAPI = {
