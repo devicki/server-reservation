@@ -48,6 +48,15 @@ class StatusResponse(BaseModel):
 # ─── GPU Health ─────────────────────────────────────────────
 
 
+class GpuProcessInfo(BaseModel):
+    """Process using a GPU (from nvidia-smi --query-compute-apps)."""
+
+    gpu_name: str = ""  # e.g. "GPU 0" or "0"
+    pid: int = 0
+    process_name: str = ""
+    used_memory_mib: int | None = None
+
+
 class GpuInfo(BaseModel):
     """Single GPU metrics from nvidia-smi."""
 
@@ -61,13 +70,24 @@ class GpuInfo(BaseModel):
 
 
 class ServerGpuHealth(BaseModel):
-    """GPU health for one server (one host)."""
+    """GPU health and usage for one server (one host)."""
 
     server_resource_id: uuid.UUID
     server_name: str
     ok: bool
     error_message: str | None = None
     gpus: list[GpuInfo] = []
+    processes: list[GpuProcessInfo] = []
+    recent_serve_cases: list["ServerServeCaseSummary"] = []
+
+
+class ServerServeCaseSummary(BaseModel):
+    """요약: 이 서버에서 공유된 serve 사례 (최근 N건)."""
+
+    id: uuid.UUID
+    model_name: str
+    serve_command_preview: str = ""
+    created_at: datetime
 
 
 class GpuHealthResponse(BaseModel):

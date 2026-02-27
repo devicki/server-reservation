@@ -277,12 +277,28 @@ export interface GpuInfo {
   temperature_gpu_c: number | null;
 }
 
+export interface GpuProcessInfo {
+  gpu_name: string;
+  pid: number;
+  process_name: string;
+  used_memory_mib: number | null;
+}
+
+export interface ServerServeCaseSummary {
+  id: string;
+  model_name: string;
+  serve_command_preview: string;
+  created_at: string;
+}
+
 export interface ServerGpuHealth {
   server_resource_id: string;
   server_name: string;
   ok: boolean;
   error_message: string | null;
   gpus: GpuInfo[];
+  processes: GpuProcessInfo[];
+  recent_serve_cases: ServerServeCaseSummary[];
 }
 
 export const dashboardAPI = {

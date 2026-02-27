@@ -34,6 +34,14 @@
 - **접근:** 로그인한 사용자만 이용 가능 (헤더 메뉴 **사례 공유** → `/serve-cases`)
 - **백엔드:** `serve_cases` 테이블 및 `GET/POST /api/v1/serve-cases/`, `GET /api/v1/serve-cases/{id}` API 추가
 
+### GPU 사용 정보 페이지 개선
+
+- **변경 내용:** 기존 **GPU 헬스** 페이지를 **GPU 사용 정보**로 이름을 변경하고, 서버별 **GPU 사용 프로세스**와 **공유된 LLM Serve 사례**를 함께 보여주도록 개선했습니다.
+- **페이지명:** 헤더 메뉴 및 페이지 제목을 "GPU 헬스" → "GPU 사용 정보"로 변경
+- **GPU 사용 프로세스:** 각 서버 카드에 `nvidia-smi --query-compute-apps` 결과를 표시 (GPU, PID, 프로세스명, vRAM 사용량)
+- **이 서버에서 공유된 LLM Serve 사례:** 같은 서버 카드에 사례 공유 페이지에서 등록된 해당 서버 최근 5건 요약 표시 (모델명, serve 커맨드 미리보기, 등록일)
+- **API:** `GET /api/v1/dashboard/gpu-health` 응답에 `processes`, `recent_serve_cases` 필드 추가
+
 ---
 
 ## 2026-02-24

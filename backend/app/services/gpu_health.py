@@ -1,10 +1,10 @@
-"""Collect GPU health from remote servers via SSH (nvidia-smi)."""
+"""Collect GPU health and process list from remote servers via SSH (nvidia-smi)."""
 import asyncio
 import logging
 import re
 from dataclasses import dataclass
 
-from app.schemas.dashboard import GpuInfo
+from app.schemas.dashboard import GpuInfo, GpuProcessInfo
 from app.services.ssh_runner import run_command
 
 logger = logging.getLogger(__name__)
@@ -15,14 +15,22 @@ class GpuHealthResult:
     ok: bool
     error_message: str | None
     gpus: list[GpuInfo]
+    processes: list[GpuProcessInfo]
 
 # nvidia-smi CSV: index, name, memory.total, memory.used, memory.free, utilization.gpu, temperature.gpu
 # With nounits. GPU name may contain commas, so we parse from the end for numeric fields.
-NVIDIA_SMI_CMD = (
+NVIDIA_SMI_GPU_CMD = (
     "nvidia-smi --query-gpu=index,name,memory.total,memory.used,memory.free,"
     "utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || "
     "nvidia-smi --query-gpu=index,name,memory.total,memory.used,memory.free,"
     "utilization.gpu,temperature.gpu --format=csv,noheader 2>/dev/null"
+)
+# GPU별 프로세스: gpu_name, pid, process_name, used_memory (MiB with nounits)
+NVIDIA_SMI_PROCESS_CMD = (
+    "nvidia-smi --query-compute-apps=gpu_name,pid,process_name,used_memory "
+    "--format=csv,noheader,nounits 2>/dev/null || "
+    "nvidia-smi --query-compute-apps=gpu_name,pid,process_name,used_memory "
+    "--format=csv,noheader 2>/dev/null"
 )
 
 
@@ -78,6 +86,37 @@ def _parse_nvidia_smi_csv(stdout: str) -> list[GpuInfo]:
     return gpus
 
 
+def _parse_process_csv(stdout: str) -> list[GpuProcessInfo]:
+    """Parse nvidia-smi --query-compute-apps CSV (gpu_name, pid, process_name, used_memory)."""
+    processes: list[GpuProcessInfo] = []
+    for line in stdout.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 4:
+            continue
+        gpu_name = (parts[0] or "").strip()
+        pid_val = _parse_int_or_none(parts[1])
+        if pid_val is None:
+            continue
+        used_mib = _parse_int_or_none(
+            parts[-1].replace("MiB", "").replace("MB", "").replace(" ", "").strip()
+        )
+        process_name = (
+            ",".join(parts[2:-1]).strip() if len(parts) > 4 else (parts[2] or "").strip()
+        )
+        processes.append(
+            GpuProcessInfo(
+                gpu_name=gpu_name,
+                pid=pid_val,
+                process_name=process_name or f"PID {pid_val}",
+                used_memory_mib=used_mib,
+            )
+        )
+    return processes
+
+
 def collect_gpu_health_sync(
     host: str,
     port: int,
@@ -94,10 +133,11 @@ def collect_gpu_health_sync(
             ok=False,
             error_message="SSH not configured (host, username, or private key missing)",
             gpus=[],
+            processes=[],
         )
     result = run_command(
         host,
-        NVIDIA_SMI_CMD,
+        NVIDIA_SMI_GPU_CMD,
         port=port,
         username=username,
         private_key=private_key,
@@ -105,11 +145,27 @@ def collect_gpu_health_sync(
     )
     if not result.ok:
         logger.warning("nvidia-smi on %s failed: %s", host, result.message)
-        return GpuHealthResult(ok=False, error_message=result.message, gpus=[])
+        return GpuHealthResult(ok=False, error_message=result.message, gpus=[], processes=[])
+    gpus = _parse_nvidia_smi_csv(result.stdout or "")
+
+    # 프로세스 목록 수집 (실패해도 gpus는 반환)
+    processes: list[GpuProcessInfo] = []
+    proc_result = run_command(
+        host,
+        NVIDIA_SMI_PROCESS_CMD,
+        port=port,
+        username=username,
+        private_key=private_key,
+        timeout_sec=timeout_sec,
+    )
+    if proc_result.ok and proc_result.stdout:
+        processes = _parse_process_csv(proc_result.stdout)
+
     return GpuHealthResult(
         ok=True,
         error_message=None,
-        gpus=_parse_nvidia_smi_csv(result.stdout or ""),
+        gpus=gpus,
+        processes=processes,
     )
 
 
