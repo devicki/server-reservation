@@ -135,23 +135,12 @@ export default function DashboardPage() {
       return;
     }
 
-    if (isMine) {
+    // 본인 예약이거나 관리자가 다른 사용자 예약을 클릭한 경우: 상세 모달을 열어 수정/삭제 가능
+    if (isMine || isAdmin) {
       setSelectedDates(null);
       setEditReservationId(eventId);
       setModalOpen(true);
       return;
-    }
-    if (isAdmin) {
-      const title = clickInfo.event.title || '이 일정';
-      if (!window.confirm(`"${title}" 일정을 삭제(취소)하시겠습니까?`)) return;
-      try {
-        await reservationsAPI.cancel(eventId);
-        const { startStr, endStr } = dateRangeRef.current;
-        if (startStr && endStr) fetchTimeline(startStr, endStr);
-      } catch (err) {
-        console.error('Failed to cancel reservation:', err);
-        alert('일정 삭제에 실패했습니다.');
-      }
     }
   };
 

@@ -146,10 +146,13 @@ class ReservationService:
         end_at: datetime | None = None,
         account_name: str | None = None,
     ) -> Reservation:
-        """Update a reservation. Only the owner can update."""
+        """Update a reservation. Owner or admin can update."""
         reservation = await ReservationService.get_by_id(db, reservation_id)
 
-        if reservation.user_id != current_user.id:
+        if (
+            reservation.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
             raise ForbiddenError("You can only modify your own reservations")
 
         if reservation.status == ReservationStatus.CANCELED:

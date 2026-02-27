@@ -147,7 +147,7 @@ async def update_reservation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update a reservation. Only the owner can update."""
+    """Update a reservation. Owner or admin can update."""
     reservation = await ReservationService.update(
         db=db,
         reservation_id=reservation_id,
