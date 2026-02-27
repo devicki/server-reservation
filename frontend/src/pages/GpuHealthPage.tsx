@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   dashboardAPI,
   type GpuInfo,
+  type GpuProcessInfo,
   type ServerGpuHealth,
 } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,15 @@ function formatMib(mib: number | null): string {
   if (mib == null) return '—';
   if (mib >= 1024) return `${(mib / 1024).toFixed(1)} GiB`;
   return `${mib} MiB`;
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    hour12: false,
+  });
 }
 
 function GpuRow({ gpu }: { gpu: GpuInfo }) {
@@ -68,7 +78,7 @@ export default function GpuHealthPage() {
       const res = await dashboardAPI.gpuHealth();
       setServers(res.data.servers);
     } catch {
-      setError('GPU 헬스 정보를 불러올 수 없습니다.');
+      setError('GPU 사용 정보를 불러올 수 없습니다.');
       setServers([]);
     } finally {
       setLoading(false);
@@ -87,7 +97,7 @@ export default function GpuHealthPage() {
 
       <div className="gpu-health-content">
         <div className="gpu-health-toolbar">
-          <h2>GPU 리소스 현황</h2>
+          <h2>GPU 사용 정보</h2>
           <button
             type="button"
             className="btn btn-secondary"
@@ -109,7 +119,7 @@ export default function GpuHealthPage() {
 
         {!error && !loading && servers.length === 0 && (
           <p className="muted">
-            SSH가 설정된 활성 서버가 없거나, GPU 헬스 수집 대상이 없습니다.
+            SSH가 설정된 활성 서버가 없거나, GPU 정보 수집 대상이 없습니다.
           </p>
         )}
 
@@ -151,6 +161,51 @@ export default function GpuHealthPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {s.ok && (s.processes?.length ?? 0) > 0 && (
+                <div className="gpu-usage-processes">
+                  <h4 className="gpu-usage-section-title">GPU 사용 프로세스</h4>
+                  <table className="gpu-health-table gpu-process-table">
+                    <thead>
+                      <tr>
+                        <th>GPU</th>
+                        <th>PID</th>
+                        <th>프로세스</th>
+                        <th>vRAM 사용</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(s.processes ?? []).map((proc, idx) => (
+                        <tr key={`${proc.gpu_name}-${proc.pid}-${idx}`}>
+                          <td>{proc.gpu_name}</td>
+                          <td>{proc.pid}</td>
+                          <td className="gpu-process-name">{proc.process_name}</td>
+                          <td>
+                            {proc.used_memory_mib != null
+                              ? formatMib(proc.used_memory_mib)
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {s.ok && (s.recent_serve_cases?.length ?? 0) > 0 && (
+                <div className="gpu-usage-serve-cases">
+                  <h4 className="gpu-usage-section-title">이 서버에서 공유된 LLM Serve 사례</h4>
+                  <ul className="gpu-serve-case-list">
+                    {(s.recent_serve_cases ?? []).map((c) => (
+                      <li key={c.id} className="gpu-serve-case-item">
+                        <div className="gpu-serve-case-model">{c.model_name}</div>
+                        {c.serve_command_preview && (
+                          <pre className="gpu-serve-case-command">{c.serve_command_preview}</pre>
+                        )}
+                        <span className="gpu-serve-case-date">{formatDate(c.created_at)}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

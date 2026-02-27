@@ -39,6 +39,9 @@ class ServerResource(Base):
     reservations = relationship(
         "Reservation", back_populates="server_resource", lazy="selectin"
     )
+    serve_cases = relationship(
+        "ServeCase", back_populates="server_resource", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<ServerResource {self.name}>"

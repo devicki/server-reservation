@@ -218,11 +218,52 @@ export interface SessionLogItem {
   event_type: SessionEventType;
   details: Record<string, unknown> | null;
   created_at: string;
+  server_name: string | null;
+  reservation_title: string | null;
+  reservation_user_name: string | null;
 }
 
 export const sessionLogsAPI = {
-  list: (params?: { reservation_id?: string; limit?: number; offset?: number }) =>
-    api.get<SessionLogItem[]>('/session-logs/', { params }),
+  list: (params?: {
+    reservation_id?: string;
+    start_date?: string;
+    end_date?: string;
+    server_resource_id?: string;
+    reservation_title?: string;
+    user_id?: string;
+    event_type?: 'activated' | 'deactivated' | 'error';
+    limit?: number;
+    offset?: number;
+  }) => api.get<SessionLogItem[]>('/session-logs/', { params }),
+};
+
+// ─── Serve Cases (LLM serve 사례 공유) ────────────────────────
+export interface ServeCaseItem {
+  id: string;
+  user_id: string;
+  user_name: string;
+  server_resource_id: string;
+  server_name: string;
+  model_name: string;
+  model_info: string | null;
+  serve_command: string;
+  resource_allocation: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export const serveCasesAPI = {
+  list: (params?: { limit?: number; offset?: number }) =>
+    api.get<{ items: ServeCaseItem[]; total: number }>('/serve-cases/', { params }),
+  get: (id: string) => api.get<ServeCaseItem>(`/serve-cases/${id}`),
+  create: (data: {
+    server_resource_id: string;
+    model_name: string;
+    model_info?: string | null;
+    serve_command: string;
+    resource_allocation?: string | null;
+    notes?: string | null;
+  }) => api.post<ServeCaseItem>('/serve-cases/', data),
 };
 
 // ─── Dashboard ─────────────────────────────────────────────
@@ -236,12 +277,28 @@ export interface GpuInfo {
   temperature_gpu_c: number | null;
 }
 
+export interface GpuProcessInfo {
+  gpu_name: string;
+  pid: number;
+  process_name: string;
+  used_memory_mib: number | null;
+}
+
+export interface ServerServeCaseSummary {
+  id: string;
+  model_name: string;
+  serve_command_preview: string;
+  created_at: string;
+}
+
 export interface ServerGpuHealth {
   server_resource_id: string;
   server_name: string;
   ok: boolean;
   error_message: string | null;
   gpus: GpuInfo[];
+  processes: GpuProcessInfo[];
+  recent_serve_cases: ServerServeCaseSummary[];
 }
 
 export const dashboardAPI = {

@@ -10,8 +10,9 @@ export default function Header() {
         <h1>GPU Server Reservation</h1>
         <nav className="header-nav">
           <NavLink to="/" className="header-link" end>예약</NavLink>
-          <NavLink to="/gpu-health" className="header-link">GPU 헬스</NavLink>
+          <NavLink to="/gpu-health" className="header-link">GPU 사용 정보</NavLink>
           <NavLink to="/feedback" className="header-link">의견 게시판</NavLink>
+          <NavLink to="/serve-cases" className="header-link">사례 공유</NavLink>
           {user?.role === 'admin' && (
             <>
               <NavLink to="/servers" className="header-link">서버 관리</NavLink>

@@ -13,5 +13,9 @@ class SessionLogResponse(BaseModel):
     event_type: SessionEventType
     details: dict | None
     created_at: datetime
+    # 예약 관련 추가 정보 (목록 가독성용)
+    server_name: str | None = None
+    reservation_title: str | None = None
+    reservation_user_name: str | None = None
 
     model_config = {"from_attributes": True}

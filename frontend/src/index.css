@@ -729,10 +729,38 @@ body {
 /* ─── Session Logs (Admin) ─── */
 .session-logs-filters {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.session-logs-filters-row {
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+}
+
+.session-logs-filter-label {
+  min-width: 6rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.session-logs-filter-input {
+  min-width: 140px;
+  max-width: 280px;
+}
+
+.session-logs-filter-sep {
+  margin: 0 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.session-logs-filters-actions {
+  margin-top: 0.25rem;
 }
 
 .session-logs-table-wrap {
@@ -805,6 +833,99 @@ body {
 .session-logs-page-info {
   font-size: 0.875rem;
   color: var(--color-text-muted);
+}
+
+/* ─── Serve Cases (LLM serve 사례 공유) ─── */
+.serve-case-actions {
+  margin-bottom: 1rem;
+}
+
+.serve-case-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  margin-bottom: 0.75rem;
+}
+
+.serve-case-table .serve-case-row {
+  cursor: pointer;
+}
+
+.serve-case-table .serve-case-row:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+}
+
+.serve-case-table .serve-case-model {
+  font-weight: 500;
+}
+
+.serve-case-table .serve-case-date {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.serve-case-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.serve-case-page-info {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.serve-case-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.serve-case-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.serve-case-detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.serve-case-detail-pre {
+  margin: 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.serve-case-command {
+  font-size: 0.8rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.serve-case-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.serve-case-form .serve-case-command-input {
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+}
+
+.serve-case-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 /* ─── Servers (Admin) ─── */
@@ -1089,6 +1210,65 @@ body {
 .gpu-temp-high {
   color: var(--color-danger);
   font-weight: 500;
+}
+
+.gpu-usage-processes,
+.gpu-usage-serve-cases {
+  margin-top: 1rem;
+}
+
+.gpu-usage-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text-muted);
+}
+
+.gpu-process-table .gpu-process-name {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}
+
+.gpu-serve-case-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gpu-serve-case-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+}
+
+.gpu-serve-case-item:last-child {
+  border-bottom: none;
+}
+
+.gpu-serve-case-model {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.gpu-serve-case-command {
+  margin: 0.25rem 0 0 0;
+  padding: 0.5rem;
+  background: #f8fafc;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.gpu-serve-case-date {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 .header-link-active {

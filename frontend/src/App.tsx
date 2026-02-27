@@ -8,6 +8,7 @@ import GpuHealthPage from './pages/GpuHealthPage';
 import ServersPage from './pages/ServersPage';
 import UsersPage from './pages/UsersPage';
 import SessionLogsPage from './pages/SessionLogsPage';
+import ServeCasePage from './pages/ServeCasePage';
 import ReleaseNotesPage from './pages/ReleaseNotesPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -115,6 +116,22 @@ export default function App() {
               <AdminRoute>
                 <ServersPage />
               </AdminRoute>
+            }
+          />
+          <Route
+            path="/serve-cases"
+            element={
+              <PrivateRoute>
+                <ServeCasePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/serve-cases/:id"
+            element={
+              <PrivateRoute>
+                <ServeCasePage />
+              </PrivateRoute>
             }
           />
           <Route

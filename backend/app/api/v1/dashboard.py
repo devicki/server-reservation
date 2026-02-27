@@ -11,18 +11,20 @@ from app.api.deps import get_current_user
 from app.database import get_db
 from app.models.reservation import Reservation, ReservationStatus
 from app.models.server_resource import ServerResource
+from app.models.serve_case import ServeCase
 from app.models.user import User
 from app.schemas.dashboard import (
     GpuHealthResponse,
     ResourceStatus,
     ServerGpuHealth,
+    ServerServeCaseSummary,
     StatusResponse,
     TimelineReservation,
     TimelineResource,
     TimelineResponse,
 )
 from app.schemas.reservation import ReservationListResponse, ReservationResponse
-from app.services.gpu_health import collect_gpu_health
+from app.services.gpu_health import collect_gpu_health, GpuHealthResult
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -204,7 +206,7 @@ async def get_gpu_health(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get GPU health (vRAM, utilization, temperature) for active servers with SSH configured."""
+    """Get GPU usage (vRAM, utilization, temperature, processes, recent serve cases) for active servers with SSH."""
     conditions = [
         ServerResource.is_active.is_(True),
         ServerResource.host.isnot(None),
@@ -221,32 +223,59 @@ async def get_gpu_health(
     )
     resources = list(result.scalars().all())
 
-    async def fetch_one(r: ServerResource) -> ServerGpuHealth:
+    async def fetch_one(r: ServerResource) -> tuple[ServerResource, GpuHealthResult]:
         try:
-            result = await collect_gpu_health(
+            gpu_result = await collect_gpu_health(
                 host=r.host or "",
                 port=r.ssh_port,
                 username=r.ssh_username or "",
                 private_key=r.ssh_private_key,
             )
-            return ServerGpuHealth(
-                server_resource_id=r.id,
-                server_name=r.name,
-                ok=result.ok,
-                error_message=result.error_message,
-                gpus=result.gpus,
-            )
+            return (r, gpu_result)
         except Exception as e:
-            return ServerGpuHealth(
-                server_resource_id=r.id,
-                server_name=r.name,
-                ok=False,
-                error_message=str(e),
-                gpus=[],
-            )
+            return (r, GpuHealthResult(ok=False, error_message=str(e), gpus=[], processes=[]))
 
     if not resources:
         return GpuHealthResponse(servers=[])
 
-    results = await asyncio.gather(*[fetch_one(r) for r in resources])
-    return GpuHealthResponse(servers=list(results))
+    gathered = await asyncio.gather(*[fetch_one(r) for r in resources])
+
+    server_ids = [r.id for r in resources]
+    cases_result = await db.execute(
+        select(ServeCase)
+        .where(ServeCase.server_resource_id.in_(server_ids))
+        .order_by(ServeCase.created_at.desc())
+    )
+    all_cases = list(cases_result.scalars().all())
+    # 서버별 최대 5건
+    cases_by_server: dict[uuid.UUID, list[ServeCase]] = {}
+    for c in all_cases:
+        if c.server_resource_id not in cases_by_server:
+            cases_by_server[c.server_resource_id] = []
+        if len(cases_by_server[c.server_resource_id]) < 5:
+            cases_by_server[c.server_resource_id].append(c)
+
+    servers_out: list[ServerGpuHealth] = []
+    for item in gathered:
+        r, gpu_result = item
+        recent = [
+            ServerServeCaseSummary(
+                id=c.id,
+                model_name=c.model_name,
+                serve_command_preview=(c.serve_command or "")[:200],
+                created_at=c.created_at,
+            )
+            for c in cases_by_server.get(r.id, [])
+        ]
+        servers_out.append(
+            ServerGpuHealth(
+                server_resource_id=r.id,
+                server_name=r.name,
+                ok=gpu_result.ok,
+                error_message=gpu_result.error_message,
+                gpus=gpu_result.gpus,
+                processes=gpu_result.processes,
+                recent_serve_cases=recent,
+            )
+        )
+    return GpuHealthResponse(servers=servers_out)

@@ -1,18 +1,44 @@
 """Session logs API - 예약 세션 활성화/비활성화 로그 조회"""
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_current_admin
 from app.database import get_db
-from app.models.reservation_session_log import ReservationSessionLog
+from app.models.reservation import Reservation
+from app.models.reservation_session_log import ReservationSessionLog, SessionEventType
 from app.models.user import User
 from app.schemas.session_log import SessionLogResponse
 
 router = APIRouter(prefix="/session-logs", tags=["Session Logs"])
+
+
+def _log_to_response(log: ReservationSessionLog) -> SessionLogResponse:
+    """Build response with reservation context (server, title, user)."""
+    server_name = None
+    reservation_title = None
+    reservation_user_name = None
+    if log.reservation:
+        reservation_title = log.reservation.title
+        if log.reservation.server_resource:
+            server_name = log.reservation.server_resource.name
+        if log.reservation.user:
+            reservation_user_name = log.reservation.user.name or log.reservation.user.email
+    return SessionLogResponse(
+        id=log.id,
+        reservation_id=log.reservation_id,
+        event_type=log.event_type,
+        details=log.details,
+        created_at=log.created_at,
+        server_name=server_name,
+        reservation_title=reservation_title,
+        reservation_user_name=reservation_user_name,
+    )
 
 
 @router.get("/", response_model=list[SessionLogResponse])
@@ -20,30 +46,67 @@ async def list_session_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_admin)],  # Admin only
     reservation_id: uuid.UUID | None = Query(None, description="Filter by reservation ID"),
+    start_date: datetime | None = Query(None, description="Filter logs from this datetime (inclusive, ISO format)"),
+    end_date: datetime | None = Query(None, description="Filter logs until this datetime (inclusive, ISO format)"),
+    server_resource_id: uuid.UUID | None = Query(None, description="Filter by server (resource) ID"),
+    reservation_title: str | None = Query(None, description="Filter by reservation title (partial match)"),
+    user_id: uuid.UUID | None = Query(None, description="Filter by reserving user ID"),
+    event_type: SessionEventType | None = Query(None, description="Filter by event type (activated, deactivated, error)"),
     limit: int = Query(50, ge=1, le=100, description="Number of logs to return"),
     offset: int = Query(0, ge=0, description="Number of logs to skip"),
 ):
     """
     세션 로그 목록 조회 (관리자 전용)
-    
-    예약의 활성화/비활성화 이벤트 로그를 조회합니다.
-    """
-    conditions = []
-    if reservation_id:
-        conditions.append(ReservationSessionLog.reservation_id == reservation_id)
 
+    예약의 활성화/비활성화 이벤트 로그를 조회합니다.
+    일시, 서버, 예약 타이틀, 예약 사용자, 예약 ID, 이벤트 타입으로 필터링할 수 있습니다.
+    """
+    conditions_log = []
+    if reservation_id:
+        conditions_log.append(ReservationSessionLog.reservation_id == reservation_id)
+    if start_date:
+        conditions_log.append(ReservationSessionLog.created_at >= start_date)
+    if end_date:
+        conditions_log.append(ReservationSessionLog.created_at <= end_date)
+    if event_type:
+        conditions_log.append(ReservationSessionLog.event_type == event_type)
+
+    conditions_reservation = []
+    if server_resource_id:
+        conditions_reservation.append(Reservation.server_resource_id == server_resource_id)
+    if reservation_title and reservation_title.strip():
+        conditions_reservation.append(
+            Reservation.title.ilike(f"%{reservation_title.strip()}%")
+        )
+    if user_id:
+        conditions_reservation.append(Reservation.user_id == user_id)
+
+    need_join = len(conditions_reservation) > 0
+    stmt = select(ReservationSessionLog)
+    if need_join:
+        stmt = stmt.join(ReservationSessionLog.reservation)
+    if conditions_log:
+        stmt = stmt.where(*conditions_log)
+    if conditions_reservation:
+        stmt = stmt.where(*conditions_reservation)
     stmt = (
-        select(ReservationSessionLog)
-        .where(*conditions)
+        stmt.options(
+            selectinload(ReservationSessionLog.reservation).selectinload(
+                Reservation.server_resource
+            ),
+            selectinload(ReservationSessionLog.reservation).selectinload(
+                Reservation.user
+            ),
+        )
         .order_by(ReservationSessionLog.created_at.desc())
         .limit(limit)
         .offset(offset)
     )
-    
+
     result = await db.execute(stmt)
     logs = result.scalars().all()
-    
-    return logs
+
+    return [_log_to_response(log) for log in logs]
 
 
 @router.get("/reservation/{reservation_id}", response_model=list[SessionLogResponse])
@@ -59,14 +122,22 @@ async def get_reservation_session_logs(
     """
     # TODO: 권한 체크 (예약 소유자 또는 관리자만)
     # 현재는 로그인한 사용자면 모두 조회 가능
-    
+
     stmt = (
         select(ReservationSessionLog)
         .where(ReservationSessionLog.reservation_id == reservation_id)
+        .options(
+            selectinload(ReservationSessionLog.reservation).selectinload(
+                Reservation.server_resource
+            ),
+            selectinload(ReservationSessionLog.reservation).selectinload(
+                Reservation.user
+            ),
+        )
         .order_by(ReservationSessionLog.created_at.desc())
     )
-    
+
     result = await db.execute(stmt)
     logs = result.scalars().all()
-    
-    return logs
+
+    return [_log_to_response(log) for log in logs]
