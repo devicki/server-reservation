@@ -31,6 +31,7 @@ interface CalendarEvent {
     resource_name: string;
     is_mine: boolean;
     account_name?: string | null;
+    status?: string;
   };
 }
 
@@ -82,19 +83,21 @@ export default function DashboardPage() {
         const color = COLORS[idx % COLORS.length];
         resource.reservations.forEach((r: any) => {
           const accountPart = r.account_name ? ` (${r.account_name})` : '';
+          const isCompleted = r.status === 'completed';
           allEvents.push({
             id: r.id,
             title: `[${resource.name}] ${r.title} - ${r.user_name}${accountPart}`,
             start: r.start_at,
             end: r.end_at,
-            backgroundColor: r.is_mine ? color : `${color}88`,
-            borderColor: color,
+            backgroundColor: isCompleted ? undefined : (r.is_mine ? color : `${color}88`),
+            borderColor: isCompleted ? undefined : color,
             extendedProps: {
               user_name: r.user_name,
               user_id: r.user_id,
               resource_name: resource.name,
               is_mine: r.is_mine,
               account_name: r.account_name ?? null,
+              status: r.status ?? 'active',
             },
           });
         });
@@ -128,6 +131,12 @@ export default function DashboardPage() {
     const eventId = clickInfo.event.id;
     const isMine = clickInfo.event.extendedProps?.is_mine === true;
     const isAdmin = user?.role === 'admin';
+    const status = clickInfo.event.extendedProps?.status as string | undefined;
+
+    if (status === 'completed') {
+      alert('완료된 예약은 수정 및 삭제할 수 없습니다.');
+      return;
+    }
 
     const eventEnd = clickInfo.event.end ? new Date(clickInfo.event.end) : null;
     if (eventEnd && eventEnd <= new Date()) {
@@ -251,11 +260,14 @@ export default function DashboardPage() {
             nowIndicator={true}
             height="auto"
             locale="ko"
-            eventClassNames={(arg) =>
-              (arg.event.extendedProps?.is_mine || user?.role === 'admin')
-                ? ['calendar-event-clickable']
-                : []
-            }
+            eventClassNames={(arg) => {
+              const isCompleted = arg.event.extendedProps?.status === 'completed';
+              if (isCompleted) return ['calendar-event-completed'];
+              if (arg.event.extendedProps?.is_mine || user?.role === 'admin') {
+                return ['calendar-event-clickable'];
+              }
+              return [];
+            }}
           />
         </div>
       </div>

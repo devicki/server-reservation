@@ -50,12 +50,12 @@ async def get_timeline(
     )
     resources = list(resources_result.scalars().all())
 
-    # Get reservations in the time range
+    # Get reservations in the time range (include both active and completed so past reservations remain visible)
     res_result = await db.execute(
         select(Reservation)
         .options(selectinload(Reservation.user))
         .where(
-            Reservation.status == ReservationStatus.ACTIVE,
+            Reservation.status.in_([ReservationStatus.ACTIVE, ReservationStatus.COMPLETED]),
             Reservation.start_at < end_date,
             Reservation.end_at > start_date,
             Reservation.server_resource_id.in_([r.id for r in resources])
@@ -78,6 +78,7 @@ async def get_timeline(
             start_at=res.start_at,
             end_at=res.end_at,
             is_mine=res.user_id == current_user.id,
+            status=res.status.value,
         )
         reservation_map.setdefault(res.server_resource_id, []).append(timeline_res)
 

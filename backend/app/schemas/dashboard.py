@@ -13,6 +13,7 @@ class TimelineReservation(BaseModel):
     start_at: datetime
     end_at: datetime
     is_mine: bool = False
+    status: str = "active"  # active | completed | canceled
 
     model_config = {"from_attributes": True}
 

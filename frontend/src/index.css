@@ -454,6 +454,19 @@ body {
   filter: brightness(0.95);
 }
 
+/* 완료된 예약: 비활성 스타일, 수정/삭제 불가 */
+.calendar-event-completed {
+  opacity: 0.6;
+  background-color: var(--color-muted, #94a3b8) !important;
+  border-color: var(--color-muted, #94a3b8) !important;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.calendar-event-completed:hover {
+  filter: none;
+}
+
 /* ─── Modal ─── */
 .modal-overlay {
   position: fixed;
