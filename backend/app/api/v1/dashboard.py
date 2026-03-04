@@ -45,6 +45,7 @@ def _instance_to_timeline(
         start_at=inst.start_at,
         end_at=inst.end_at,
         is_mine=res.user_id == current_user_id,
+        is_recurring=res.is_recurring,
         status=inst.status.value,
     )
 

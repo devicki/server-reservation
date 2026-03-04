@@ -454,6 +454,125 @@ body {
   filter: brightness(0.95);
 }
 
+/* 반복 예약: 점선 테두리로 구분 */
+.calendar-event-recurring {
+  border-style: dashed !important;
+  border-width: 2px !important;
+}
+
+/* 커스텀 이벤트 내부 레이아웃 */
+.fc-event-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  height: 100%;
+  padding: 1px 2px;
+}
+
+/* Month 뷰 이벤트: 가로 한 줄 레이아웃 */
+.fc-event-inner--month {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  height: 100%;
+  background: transparent;
+}
+
+/* Month 뷰: FC 기본 배경·테두리를 제거하고 도트로만 서버 색상 표현 */
+.fc-daygrid-event {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.fc-daygrid-event:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent) !important;
+}
+
+/* 단, completed 상태는 기존 흐림 스타일 유지 */
+.fc-daygrid-event.calendar-event-completed {
+  background-color: var(--color-muted, #94a3b8) !important;
+  border-color: var(--color-muted, #94a3b8) !important;
+  opacity: 0.6;
+}
+
+/* 반복 예약 month 뷰 점선 */
+.fc-daygrid-event.calendar-event-recurring .fc-event-inner--month {
+  text-decoration: none;
+}
+.fc-daygrid-event.calendar-event-recurring {
+  border-style: dashed !important;
+  border-width: 1px !important;
+  border-color: currentColor !important;
+  background: transparent !important;
+}
+
+/* 서버 색상 도트 */
+.fc-event-server-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* 서버명 뱃지 */
+.fc-event-server-name {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.fc-event-sep {
+  font-size: 0.6875rem;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.fc-event-user {
+  font-size: 0.6875rem;
+  opacity: 0.65;
+  white-space: nowrap;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-event-time {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  opacity: 0.85;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fc-event-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fc-event-recurring-icon {
+  font-size: 0.7rem;
+  font-style: normal;
+  flex-shrink: 0;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.fc-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+}
+
 /* 완료된 예약: 비활성 스타일, 수정/삭제 불가 */
 .calendar-event-completed {
   opacity: 0.6;
@@ -465,6 +584,46 @@ body {
 
 .calendar-event-completed:hover {
   filter: none;
+}
+
+/* 범례 */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.legend-dot {
+  width: 20px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-dot--solid {
+  background: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.legend-dot--recurring {
+  background: var(--color-primary);
+  border: 2px dashed var(--color-primary);
+}
+
+.legend-dot--others {
+  background: color-mix(in srgb, var(--color-primary) 53%, transparent);
+  border: 2px solid var(--color-primary);
 }
 
 /* ─── Modal ─── */

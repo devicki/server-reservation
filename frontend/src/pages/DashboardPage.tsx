@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import { configAPI, dashboardAPI, resourcesAPI, reservationsAPI } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import Header from '../components/Header';
-import ReservationModal from '../components/ReservationModal';
-import ServerStatus from '../components/ServerStatus';
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import {
+  configAPI,
+  dashboardAPI,
+  resourcesAPI,
+  reservationsAPI,
+} from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
+import ReservationModal from "../components/ReservationModal";
+import ServerStatus from "../components/ServerStatus";
 
 interface Resource {
   id: string;
@@ -28,18 +33,27 @@ interface CalendarEvent {
   extendedProps: {
     reservation_id: string;
     instance_id: string;
+    reservation_title: string;
     user_name: string;
     user_id: string;
     resource_name: string;
+    resource_color: string;
     is_mine: boolean;
+    is_recurring: boolean;
     account_name?: string | null;
     status?: string;
   };
 }
 
 const COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-  '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
 ];
 
 export default function DashboardPage() {
@@ -47,12 +61,19 @@ export default function DashboardPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<{ start: string; end: string } | null>(null);
-  const [selectedResource, setSelectedResource] = useState<string>('');
-  const [editReservationId, setEditReservationId] = useState<string | null>(null);
+  const [selectedDates, setSelectedDates] = useState<{
+    start: string;
+    end: string;
+  } | null>(null);
+  const [selectedResource, setSelectedResource] = useState<string>("");
+  const [editReservationId, setEditReservationId] = useState<string | null>(
+    null,
+  );
   const [editInstanceId, setEditInstanceId] = useState<string | null>(null);
-  const [maxReservationHours, setMaxReservationHours] = useState<number | null>(null);
-  const dateRangeRef = useRef({ startStr: '', endStr: '' });
+  const [maxReservationHours, setMaxReservationHours] = useState<number | null>(
+    null,
+  );
+  const dateRangeRef = useRef({ startStr: "", endStr: "" });
 
   const fetchConfig = async () => {
     try {
@@ -71,7 +92,7 @@ export default function DashboardPage() {
         setSelectedResource(res.data.items[0].id);
       }
     } catch (err) {
-      console.error('Failed to fetch resources:', err);
+      console.error("Failed to fetch resources:", err);
     }
   };
 
@@ -85,31 +106,39 @@ export default function DashboardPage() {
       res.data.resources.forEach((resource: any, idx: number) => {
         const color = COLORS[idx % COLORS.length];
         resource.reservations.forEach((r: any) => {
-          const accountPart = r.account_name ? ` (${r.account_name})` : '';
-          const isCompleted = r.status === 'completed';
+          const accountPart = r.account_name ? ` (${r.account_name})` : "";
+          const isCompleted = r.status === "completed";
+          const isRecurring = Boolean(r.is_recurring);
           allEvents.push({
-            id: r.id,  // instance_id (고유 키)
-            title: `[${resource.name}] ${r.title} - ${r.user_name}${accountPart}`,
+            id: r.id, // instance_id (고유 키)
+            title: `[${resource.name}${accountPart}] ${r.title} - ${r.user_name}`,
             start: r.start_at,
             end: r.end_at,
-            backgroundColor: isCompleted ? undefined : (r.is_mine ? color : `${color}88`),
+            backgroundColor: isCompleted
+              ? undefined
+              : r.is_mine
+                ? color
+                : `${color}88`,
             borderColor: isCompleted ? undefined : color,
             extendedProps: {
-              reservation_id: r.reservation_id,  // 수정/삭제용 reservation ID
-              instance_id: r.id,                 // 반복 예약 instance 수정용 ID
+              reservation_id: r.reservation_id,
+              instance_id: r.id,
+              reservation_title: r.title,
               user_name: r.user_name,
               user_id: r.user_id,
               resource_name: resource.name,
+              resource_color: color,
               is_mine: r.is_mine,
+              is_recurring: isRecurring,
               account_name: r.account_name ?? null,
-              status: r.status ?? 'active',
+              status: r.status ?? "active",
             },
           });
         });
       });
       setEvents(allEvents);
     } catch (err) {
-      console.error('Failed to fetch timeline:', err);
+      console.error("Failed to fetch timeline:", err);
     }
   };
 
@@ -128,25 +157,30 @@ export default function DashboardPage() {
   };
 
   const handleDatesSet = (dateInfo: any) => {
-    dateRangeRef.current = { startStr: dateInfo.startStr, endStr: dateInfo.endStr };
+    dateRangeRef.current = {
+      startStr: dateInfo.startStr,
+      endStr: dateInfo.endStr,
+    };
     fetchTimeline(dateInfo.startStr, dateInfo.endStr);
   };
 
   const handleEventClick = async (clickInfo: any) => {
-    const reservationId = clickInfo.event.extendedProps?.reservation_id ?? clickInfo.event.id;
-    const instanceId = clickInfo.event.extendedProps?.instance_id ?? clickInfo.event.id;
+    const reservationId =
+      clickInfo.event.extendedProps?.reservation_id ?? clickInfo.event.id;
+    const instanceId =
+      clickInfo.event.extendedProps?.instance_id ?? clickInfo.event.id;
     const isMine = clickInfo.event.extendedProps?.is_mine === true;
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === "admin";
     const status = clickInfo.event.extendedProps?.status as string | undefined;
 
-    if (status === 'completed') {
-      alert('완료된 예약은 수정 및 삭제할 수 없습니다.');
+    if (status === "completed") {
+      alert("완료된 예약은 수정 및 삭제할 수 없습니다.");
       return;
     }
 
     const eventEnd = clickInfo.event.end ? new Date(clickInfo.event.end) : null;
     if (eventEnd && eventEnd <= new Date()) {
-      alert('과거 일정은 수정 및 삭제할 수 없습니다.');
+      alert("과거 일정은 수정 및 삭제할 수 없습니다.");
       return;
     }
 
@@ -242,6 +276,20 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
+            <div className="legend">
+              <div className="legend-item">
+                <span className="legend-dot legend-dot--solid" />
+                <span>일반 예약</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-dot legend-dot--recurring" />
+                <span>반복 예약</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-dot legend-dot--others" />
+                <span>다른 사용자</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -250,9 +298,9 @@ export default function DashboardPage() {
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
             headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay',
+              left: "prev,next today",
+              center: "title",
+              right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             selectable={true}
             selectMirror={true}
@@ -270,12 +318,93 @@ export default function DashboardPage() {
             height="auto"
             locale="ko"
             eventClassNames={(arg) => {
-              const isCompleted = arg.event.extendedProps?.status === 'completed';
-              if (isCompleted) return ['calendar-event-completed'];
-              if (arg.event.extendedProps?.is_mine || user?.role === 'admin') {
-                return ['calendar-event-clickable'];
+              const classes: string[] = [];
+              const isCompleted =
+                arg.event.extendedProps?.status === "completed";
+              const isRecurring =
+                arg.event.extendedProps?.is_recurring === true;
+              if (isCompleted) {
+                classes.push("calendar-event-completed");
+              } else {
+                if (isRecurring) classes.push("calendar-event-recurring");
+                if (
+                  arg.event.extendedProps?.is_mine ||
+                  user?.role === "admin"
+                ) {
+                  classes.push("calendar-event-clickable");
+                }
               }
-              return [];
+              return classes;
+            }}
+            eventContent={(arg) => {
+              const {
+                is_recurring,
+                is_mine,
+                resource_name,
+                resource_color,
+                reservation_title,
+                user_name,
+                account_name,
+                status,
+              } = arg.event.extendedProps;
+              const isCompleted = status === "completed";
+              const isMonth = arg.view.type === "dayGridMonth";
+              const accountPart = account_name ? ` (${account_name})` : "";
+              const color: string = resource_color ?? "";
+              const dotColor = is_mine ? color : `${color}88`;
+
+              if (isMonth) {
+                // ── Month 뷰: 서버 색상 도트 + 서버명 + 제목 한 줄 ──
+                return (
+                  <div
+                    className="fc-event-inner fc-event-inner--month"
+                    style={
+                      isCompleted
+                        ? {}
+                        : { color: is_mine ? color : `${color}cc` }
+                    }
+                  >
+                    <span
+                      className="fc-event-server-dot"
+                      style={{ background: dotColor, borderColor: color }}
+                    />
+                    {is_recurring && (
+                      <span
+                        className="fc-event-recurring-icon"
+                        title="반복 예약"
+                      >
+                        ↻
+                      </span>
+                    )}
+                    <span className="fc-event-title">
+                      {accountPart}
+                      {reservation_title}
+                    </span>
+                    <span className="fc-event-user"> {user_name}</span>
+                  </div>
+                );
+              }
+
+              // ── Week / Day 뷰: 기존 레이아웃 ──
+              const timeText = arg.timeText;
+              return (
+                <div className="fc-event-inner">
+                  {timeText && (
+                    <span className="fc-event-time">{timeText}</span>
+                  )}
+                  <span className="fc-event-title-wrap">
+                    {is_recurring && (
+                      <span
+                        className="fc-event-recurring-icon"
+                        title="반복 예약"
+                      >
+                        ↻
+                      </span>
+                    )}
+                    <span className="fc-event-title">{arg.event.title}</span>
+                  </span>
+                </div>
+              );
             }}
           />
         </div>
@@ -285,8 +414,8 @@ export default function DashboardPage() {
         <ReservationModal
           resources={resources}
           selectedResourceId={selectedResource}
-          initialStart={selectedDates?.start ?? ''}
-          initialEnd={selectedDates?.end ?? ''}
+          initialStart={selectedDates?.start ?? ""}
+          initialEnd={selectedDates?.end ?? ""}
           reservationId={editReservationId}
           instanceId={editInstanceId}
           maxReservationHours={maxReservationHours ?? undefined}

@@ -14,6 +14,7 @@ class TimelineReservation(BaseModel):
     start_at: datetime
     end_at: datetime
     is_mine: bool = False
+    is_recurring: bool = False  # 반복 예약 여부
     status: str = "active"  # active | completed | canceled
 
     model_config = {"from_attributes": True}
