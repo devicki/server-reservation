@@ -380,7 +380,7 @@ export default function DashboardPage() {
                       {accountPart}
                       {reservation_title}
                     </span>
-                    <span className="fc-event-user"> {user_name}</span>
+                    <span className="fc-event-user"> - {user_name}</span>
                   </div>
                 );
               }

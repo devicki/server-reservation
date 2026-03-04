@@ -6,22 +6,27 @@
 - 중복 방지는 DB EXCLUDE 제약에 위임: bulk insert 후 IntegrityError 발생 시 rollback.
 - 단일 예약도 동일 흐름(instance 1개)으로 처리하여 스케줄러 쿼리를 단일화.
 """
+
 import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, ForbiddenError
+from app.core.exceptions import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+)
 from app.models.recurrence_rule import RecurrenceRule
 from app.models.reservation import Reservation, ReservationStatus
 from app.models.reservation_instance import ReservationInstance
 from app.models.server_resource import ServerResource
 from app.models.user import User, UserRole
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +53,7 @@ class RecurrenceSpec:
 
     freq: FreqType
     interval: int = 1
-    by_day: str | None = None        # WEEKLY: "MON,WED,FRI"
+    by_day: str | None = None  # WEEKLY: "MON,WED,FRI"
     by_month_day: int | None = None  # MONTHLY: 15
 
 
@@ -90,7 +95,9 @@ def compute_recurrence_dates(
 
     elif spec.freq == "WEEKLY":
         if not spec.by_day:
-            raise BadRequestError("WEEKLY 반복에는 by_day 값이 필요합니다 (예: MON,WED)")
+            raise BadRequestError(
+                "WEEKLY 반복에는 by_day 값이 필요합니다 (예: MON,WED)"
+            )
         target_weekdays = {
             _WEEKDAY_MAP[d.strip().upper()]
             for d in spec.by_day.split(",")
@@ -119,7 +126,9 @@ def compute_recurrence_dates(
 
     elif spec.freq == "MONTHLY":
         if spec.by_month_day is None:
-            raise BadRequestError("MONTHLY 반복에는 by_month_day 값이 필요합니다 (예: 15)")
+            raise BadRequestError(
+                "MONTHLY 반복에는 by_month_day 값이 필요합니다 (예: 15)"
+            )
         cur = start
         while cur <= until:
             dates.append((cur, cur + duration))
@@ -266,7 +275,9 @@ class RecurringReservationService:
         # 날짜 목록 계산
         date_pairs = compute_recurrence_dates(start_utc, duration, spec, until)
         if not date_pairs:
-            raise BadRequestError("생성할 반복 instance가 없습니다 (날짜 범위를 확인하세요)")
+            raise BadRequestError(
+                "생성할 반복 instance가 없습니다 (날짜 범위를 확인하세요)"
+            )
 
         # RecurrenceRule 생성
         rule = RecurrenceRule(
@@ -352,7 +363,10 @@ class RecurringReservationService:
         reservation = rsv_result.scalar_one_or_none()
         if reservation is None:
             raise NotFoundError("Reservation not found")
-        if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        if (
+            reservation.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
             raise ForbiddenError("자신의 예약만 수정할 수 있습니다")
 
         new_start = start_at or instance.start_at
@@ -396,7 +410,7 @@ class RecurringReservationService:
         description: str | None = None,
         account_name: str | None = None,
         start_time_hhmm: str | None = None,  # "HH:MM"
-        end_time_hhmm: str | None = None,    # "HH:MM"
+        end_time_hhmm: str | None = None,  # "HH:MM"
     ) -> tuple[Reservation, int]:
         """
         이 일정부터 이후 모든 instance 수정.
@@ -421,7 +435,10 @@ class RecurringReservationService:
         reservation = rsv_result.scalar_one_or_none()
         if reservation is None:
             raise NotFoundError("Reservation not found")
-        if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        if (
+            reservation.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
             raise ForbiddenError("자신의 예약만 수정할 수 있습니다")
 
         # 메타데이터 업데이트
@@ -448,7 +465,9 @@ class RecurringReservationService:
                 # start_at 기준으로 시각 교체 (날짜는 start_at의 날짜 유지)
                 if start_time_hhmm:
                     h, m = map(int, start_time_hhmm.split(":"))
-                    new_start = inst.start_at.replace(hour=h, minute=m, second=0, microsecond=0)
+                    new_start = inst.start_at.replace(
+                        hour=h, minute=m, second=0, microsecond=0
+                    )
                 else:
                     new_start = inst.start_at
 
@@ -456,7 +475,9 @@ class RecurringReservationService:
                 # (기존 예약이 자정을 넘는 경우에도 항상 start 날짜 기준으로 end 계산)
                 if end_time_hhmm:
                     h, m = map(int, end_time_hhmm.split(":"))
-                    new_end = new_start.replace(hour=h, minute=m, second=0, microsecond=0)
+                    new_end = new_start.replace(
+                        hour=h, minute=m, second=0, microsecond=0
+                    )
                     # end가 start보다 앞서면 다음날로 넘김 (자정 이후 종료 허용)
                     if new_end <= new_start:
                         new_end = new_end + timedelta(days=1)
@@ -504,7 +525,10 @@ class RecurringReservationService:
         reservation = rsv_result.scalar_one_or_none()
         if reservation is None:
             raise NotFoundError("Reservation not found")
-        if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        if (
+            reservation.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
             raise ForbiddenError("자신의 예약만 취소할 수 있습니다")
 
         return instance, reservation
@@ -538,8 +562,10 @@ class RecurringReservationService:
         Returns:
             (취소된 instance, 부모 reservation)
         """
-        instance, reservation = await RecurringReservationService._get_instance_with_reservation(
-            db, instance_id, current_user
+        instance, reservation = (
+            await RecurringReservationService._get_instance_with_reservation(
+                db, instance_id, current_user
+            )
         )
 
         if instance.status == ReservationStatus.CANCELED:
@@ -548,7 +574,9 @@ class RecurringReservationService:
             raise ForbiddenError("과거 일정은 취소할 수 없습니다")
 
         instance.status = ReservationStatus.CANCELED
-        await RecurringReservationService._cancel_reservation_if_all_done(db, reservation)
+        await RecurringReservationService._cancel_reservation_if_all_done(
+            db, reservation
+        )
 
         await db.commit()
         await db.refresh(instance)
@@ -574,8 +602,10 @@ class RecurringReservationService:
         Returns:
             (부모 reservation, 취소된 instance 수)
         """
-        instance, reservation = await RecurringReservationService._get_instance_with_reservation(
-            db, instance_id, current_user
+        instance, reservation = (
+            await RecurringReservationService._get_instance_with_reservation(
+                db, instance_id, current_user
+            )
         )
 
         future_result = await db.execute(
@@ -590,7 +620,9 @@ class RecurringReservationService:
         for inst in future_instances:
             inst.status = ReservationStatus.CANCELED
 
-        await RecurringReservationService._cancel_reservation_if_all_done(db, reservation)
+        await RecurringReservationService._cancel_reservation_if_all_done(
+            db, reservation
+        )
 
         await db.commit()
         await db.refresh(reservation)
@@ -626,7 +658,10 @@ class RecurringReservationService:
         reservation = rsv_result.scalar_one_or_none()
         if reservation is None:
             raise NotFoundError("Reservation not found")
-        if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        if (
+            reservation.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
             raise ForbiddenError("자신의 예약만 취소할 수 있습니다")
 
         instance_query = select(ReservationInstance).where(
@@ -666,6 +701,7 @@ class RecurringReservationService:
 # 내부 헬퍼
 # ------------------------------------------------------------------ #
 
+
 def _raise_conflict_from_integrity_error(exc: IntegrityError) -> None:
     """
     IntegrityError를 분석하여 적절한 ConflictError를 발생시킨다.
@@ -673,10 +709,7 @@ def _raise_conflict_from_integrity_error(exc: IntegrityError) -> None:
     """
     error_str = str(exc.orig).lower() if exc.orig else str(exc).lower()
     if "no_overlap_per_server" in error_str or "exclusion constraint" in error_str:
-        raise ConflictError(
-            "해당 서버에 시간이 겹치는 예약이 이미 존재합니다 "
-            "(DB EXCLUDE 제약 위반)"
-        )
+        raise ConflictError("해당 서버에 시간이 겹치는 예약이 이미 존재합니다 ")
     # 그 외 integrity 오류 (예: FK 위반 등)
     logger.error(f"Unexpected IntegrityError: {exc}", exc_info=True)
     raise ConflictError("예약 저장 중 데이터 무결성 오류가 발생했습니다")
