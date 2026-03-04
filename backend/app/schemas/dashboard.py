@@ -5,7 +5,8 @@ from pydantic import BaseModel
 
 
 class TimelineReservation(BaseModel):
-    id: uuid.UUID
+    id: uuid.UUID           # ReservationInstance ID (캘린더 이벤트 고유 키)
+    reservation_id: uuid.UUID  # 원본 Reservation ID (수정/삭제에 사용)
     title: str
     user_name: str
     user_id: uuid.UUID

@@ -26,6 +26,7 @@ interface CalendarEvent {
   backgroundColor?: string;
   borderColor?: string;
   extendedProps: {
+    reservation_id: string;
     user_name: string;
     user_id: string;
     resource_name: string;
@@ -85,13 +86,14 @@ export default function DashboardPage() {
           const accountPart = r.account_name ? ` (${r.account_name})` : '';
           const isCompleted = r.status === 'completed';
           allEvents.push({
-            id: r.id,
+            id: r.id,  // instance_id (고유 키)
             title: `[${resource.name}] ${r.title} - ${r.user_name}${accountPart}`,
             start: r.start_at,
             end: r.end_at,
             backgroundColor: isCompleted ? undefined : (r.is_mine ? color : `${color}88`),
             borderColor: isCompleted ? undefined : color,
             extendedProps: {
+              reservation_id: r.reservation_id,  // 수정/삭제용 reservation ID
               user_name: r.user_name,
               user_id: r.user_id,
               resource_name: resource.name,
@@ -128,7 +130,7 @@ export default function DashboardPage() {
   };
 
   const handleEventClick = async (clickInfo: any) => {
-    const eventId = clickInfo.event.id;
+    const reservationId = clickInfo.event.extendedProps?.reservation_id ?? clickInfo.event.id;
     const isMine = clickInfo.event.extendedProps?.is_mine === true;
     const isAdmin = user?.role === 'admin';
     const status = clickInfo.event.extendedProps?.status as string | undefined;
@@ -147,7 +149,7 @@ export default function DashboardPage() {
     // 본인 예약이거나 관리자가 다른 사용자 예약을 클릭한 경우: 상세 모달을 열어 수정/삭제 가능
     if (isMine || isAdmin) {
       setSelectedDates(null);
-      setEditReservationId(eventId);
+      setEditReservationId(reservationId);
       setModalOpen(true);
       return;
     }

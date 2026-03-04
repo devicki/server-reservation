@@ -36,7 +36,8 @@ def _instance_to_timeline(
     current_user_id: uuid.UUID,
 ) -> TimelineReservation:
     return TimelineReservation(
-        id=res.id,
+        id=inst.id,
+        reservation_id=res.id,
         title=res.title,
         user_name=res.user.name if res.user else "Unknown",
         user_id=res.user_id,
