@@ -168,6 +168,27 @@ export const reservationsAPI = {
   }) => api.get('/reservations/check-availability', { params }),
 };
 
+// ─── Recurring Reservations ────────────────────────────
+export interface RecurrenceSpec {
+  freq: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  interval: number;
+  by_day?: string | null;
+  by_month_day?: number | null;
+}
+
+export const recurringReservationsAPI = {
+  create: (data: {
+    server_resource_id: string;
+    title: string;
+    description?: string;
+    account_name?: string;
+    start_at: string;
+    end_at: string;
+    recurrence: RecurrenceSpec;
+    recurrence_end_date?: string | null;
+  }) => api.post('/reservations/recurring/', data),
+};
+
 // ─── Feedback (시스템 개선 의견) ─────────────────────────────
 export interface FeedbackCommentItem {
   id: string;

@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    CheckConstraint,
     DateTime,
     Enum,
     ForeignKey,
@@ -26,14 +25,9 @@ class ReservationStatus(str, enum.Enum):
 class Reservation(Base):
     __tablename__ = "reservations"
     __table_args__ = (
-        CheckConstraint("end_at > start_at", name="valid_time_range"),
-        Index(
-            "idx_reservations_server_time",
-            "server_resource_id",
-            "start_at",
-            "end_at",
-        ),
         Index("idx_reservations_user", "user_id"),
+        Index("idx_reservations_recurrence", "recurrence_rule_id"),
+        Index("idx_reservations_server", "server_resource_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -45,13 +39,18 @@ class Reservation(Base):
     server_resource_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("server_resources.id"), nullable=False
     )
+
+    # 반복 예약일 경우 recurrence_rule_id가 설정됨; 단일 예약은 NULL
+    recurrence_rule_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("recurrence_rules.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     account_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    start_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
     status: Mapped[ReservationStatus] = mapped_column(
         Enum(
             ReservationStatus,
@@ -82,6 +81,19 @@ class Reservation(Base):
     server_resource = relationship(
         "ServerResource", back_populates="reservations", lazy="selectin"
     )
+    recurrence_rule = relationship(
+        "RecurrenceRule", back_populates="reservations", lazy="select"
+    )
+    instances = relationship(
+        "ReservationInstance",
+        back_populates="reservation",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def is_recurring(self) -> bool:
+        return self.recurrence_rule_id is not None
 
     def __repr__(self) -> str:
-        return f"<Reservation {self.title} ({self.start_at} - {self.end_at})>"
+        return f"<Reservation {self.title} (recurring={self.is_recurring})>"

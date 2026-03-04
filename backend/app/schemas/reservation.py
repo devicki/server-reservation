@@ -80,6 +80,15 @@ class ReservationResourceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReservationInstanceResponse(BaseModel):
+    id: uuid.UUID
+    start_at: datetime
+    end_at: datetime
+    status: ReservationStatus
+
+    model_config = {"from_attributes": True}
+
+
 class ReservationResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -87,8 +96,9 @@ class ReservationResponse(BaseModel):
     title: str
     description: str | None
     account_name: str | None = None
-    start_at: datetime
-    end_at: datetime
+    # 단일 예약의 편의 필드: 첫 번째 instance에서 파생 (반복 예약은 None)
+    start_at: datetime | None = None
+    end_at: datetime | None = None
     status: ReservationStatus
     google_event_id: str | None
     calendar_synced: bool = False
@@ -96,8 +106,22 @@ class ReservationResponse(BaseModel):
     updated_at: datetime
     user: ReservationUserResponse | None = None
     server_resource: ReservationResourceResponse | None = None
+    # 전체 instance 목록 (반복 예약 포함 조회 시 활용)
+    instances: list[ReservationInstanceResponse] = []
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def populate_single_times(self):
+        """
+        단일 예약(is_recurring=False)에서 start_at/end_at이 없을 경우
+        첫 번째 instance에서 자동으로 채운다.
+        """
+        if self.start_at is None and self.instances:
+            self.start_at = self.instances[0].start_at
+        if self.end_at is None and self.instances:
+            self.end_at = self.instances[0].end_at
+        return self
 
 
 class ReservationListResponse(BaseModel):

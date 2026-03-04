@@ -1054,6 +1054,184 @@ body {
   margin-top: 0.25rem;
 }
 
+.form-hint--error {
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+.form-hint-inline {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* ─── 예약 타입 토글 ─── */
+.reservation-type-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.type-toggle-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.type-toggle-btn + .type-toggle-btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.type-toggle-btn.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.type-toggle-btn:hover:not(.active) {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+/* ─── 반복 예약 패널 ─── */
+.recurrence-panel {
+  background: #f8faff;
+  border: 1px solid #dbeafe;
+  border-radius: var(--radius);
+  padding: 1rem 1.125rem;
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+/* 주기 버튼 그룹 */
+.recurrence-freq-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.freq-btn {
+  flex: 1;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.freq-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.freq-btn:hover:not(.active) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* 간격 입력 */
+.form-group--inline {
+  display: flex;
+  flex-direction: column;
+}
+
+.interval-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.interval-input {
+  width: 4.5rem !important;
+  text-align: center;
+  padding: 0.5rem 0.5rem !important;
+}
+
+.interval-unit {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* 요일 선택기 */
+.weekday-picker {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.weekday-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.weekday-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.weekday-btn:hover:not(.active) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* 반복 예약 요약 */
+.recurrence-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: #1d4ed8;
+  margin-top: 0.375rem;
+  line-height: 1.5;
+}
+
+.recurrence-summary-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  margin-top: 0.05rem;
+}
+
+/* 넓은 모달 (반복 예약 시 스크롤 공간 확보) */
+.modal--wide {
+  max-width: 560px;
+}
+
+.modal--wide .modal-body {
+  padding-bottom: 320px;
+}
+
 /* 서버 관리: 시스템 기본 예외 (읽기 전용) */
 .servers-default-exclude {
   margin-bottom: 1.25rem;

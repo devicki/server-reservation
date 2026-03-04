@@ -21,9 +21,19 @@ class ReservationSessionLog(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    reservation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("reservations.id"), nullable=False
+
+    # 기존 컬럼: 단일 예약 호환성을 위해 유지 (nullable로 변경)
+    reservation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reservations.id"), nullable=True
     )
+
+    # 신규 컬럼: instance 기반 로깅 (migration 010에서 추가됨)
+    reservation_instance_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("reservation_instances.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     event_type: Mapped[SessionEventType] = mapped_column(
         Enum(
             SessionEventType,
@@ -41,7 +51,11 @@ class ReservationSessionLog(Base):
     )
 
     # Relationships
-    reservation = relationship("Reservation", lazy="selectin")
+    reservation = relationship("Reservation", lazy="selectin", foreign_keys=[reservation_id])
+    instance = relationship(
+        "ReservationInstance", lazy="selectin", foreign_keys=[reservation_instance_id]
+    )
 
     def __repr__(self) -> str:
-        return f"<ReservationSessionLog {self.event_type} for {self.reservation_id}>"
+        return f"<ReservationSessionLog {self.event_type} instance={self.reservation_instance_id}>"
+

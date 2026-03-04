@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user
 from app.database import get_db
 from app.models.reservation import Reservation, ReservationStatus
+from app.models.reservation_instance import ReservationInstance
 from app.models.server_resource import ServerResource
 from app.models.serve_case import ServeCase
 from app.models.user import User
@@ -29,6 +30,24 @@ from app.services.gpu_health import collect_gpu_health, GpuHealthResult
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
+def _instance_to_timeline(
+    res: Reservation,
+    inst: ReservationInstance,
+    current_user_id: uuid.UUID,
+) -> TimelineReservation:
+    return TimelineReservation(
+        id=res.id,
+        title=res.title,
+        user_name=res.user.name if res.user else "Unknown",
+        user_id=res.user_id,
+        account_name=res.account_name,
+        start_at=inst.start_at,
+        end_at=inst.end_at,
+        is_mine=res.user_id == current_user_id,
+        status=inst.status.value,
+    )
+
+
 @router.get("/timeline", response_model=TimelineResponse)
 async def get_timeline(
     start_date: datetime = Query(...),
@@ -38,7 +57,6 @@ async def get_timeline(
     current_user: User = Depends(get_current_user),
 ):
     """Get a timeline view of reservations grouped by server resource."""
-    # Get active resources
     resource_conditions = [ServerResource.is_active.is_(True)]
     if server_resource_ids:
         resource_conditions.append(ServerResource.id.in_(server_resource_ids))
@@ -49,38 +67,29 @@ async def get_timeline(
         .order_by(ServerResource.name)
     )
     resources = list(resources_result.scalars().all())
+    resource_ids = [r.id for r in resources]
 
-    # Get reservations in the time range (include both active and completed so past reservations remain visible)
-    res_result = await db.execute(
-        select(Reservation)
-        .options(selectinload(Reservation.user))
+    # instances 기준으로 시간 범위 필터링
+    inst_result = await db.execute(
+        select(ReservationInstance)
+        .join(Reservation, Reservation.id == ReservationInstance.reservation_id)
+        .options(selectinload(ReservationInstance.reservation).selectinload(Reservation.user))
         .where(
-            Reservation.status.in_([ReservationStatus.ACTIVE, ReservationStatus.COMPLETED]),
-            Reservation.start_at < end_date,
-            Reservation.end_at > start_date,
-            Reservation.server_resource_id.in_([r.id for r in resources])
-            if resources
-            else True,
+            ReservationInstance.server_resource_id.in_(resource_ids) if resource_ids else True,
+            ReservationInstance.status.in_([ReservationStatus.ACTIVE, ReservationStatus.COMPLETED]),
+            ReservationInstance.start_at < end_date,
+            ReservationInstance.end_at > start_date,
         )
-        .order_by(Reservation.start_at)
+        .order_by(ReservationInstance.start_at)
     )
-    reservations = list(res_result.scalars().all())
+    instances = list(inst_result.scalars().all())
 
-    # Group by resource
+    # 서버별로 그룹핑
     reservation_map: dict[uuid.UUID, list[TimelineReservation]] = {}
-    for res in reservations:
-        timeline_res = TimelineReservation(
-            id=res.id,
-            title=res.title,
-            user_name=res.user.name if res.user else "Unknown",
-            user_id=res.user_id,
-            account_name=res.account_name,
-            start_at=res.start_at,
-            end_at=res.end_at,
-            is_mine=res.user_id == current_user.id,
-            status=res.status.value,
-        )
-        reservation_map.setdefault(res.server_resource_id, []).append(timeline_res)
+    for inst in instances:
+        res = inst.reservation
+        timeline_res = _instance_to_timeline(res, inst, current_user.id)
+        reservation_map.setdefault(inst.server_resource_id, []).append(timeline_res)
 
     timeline_resources = [
         TimelineResource(
@@ -104,6 +113,8 @@ async def get_my_reservations(
 ):
     """Get the current user's reservations."""
     from app.services.reservation import ReservationService
+    from sqlalchemy.orm import selectinload as sil
+    from sqlalchemy import select as sel
 
     reservations, total = await ReservationService.list_reservations(
         db=db,
@@ -112,6 +123,21 @@ async def get_my_reservations(
         limit=limit,
         offset=offset,
     )
+
+    # instances 일괄 로드해서 start_at/end_at 채우기
+    if reservations:
+        rsv_ids = [r.id for r in reservations]
+        inst_result = await db.execute(
+            sel(ReservationInstance)
+            .where(ReservationInstance.reservation_id.in_(rsv_ids))
+            .order_by(ReservationInstance.start_at)
+        )
+        instances_by_rsv: dict[uuid.UUID, list[ReservationInstance]] = {}
+        for inst in inst_result.scalars().all():
+            instances_by_rsv.setdefault(inst.reservation_id, []).append(inst)
+        for rsv in reservations:
+            rsv.instances = instances_by_rsv.get(rsv.id, [])
+
     return ReservationListResponse(
         items=[ReservationResponse.model_validate(r) for r in reservations],
         total=total,
@@ -126,7 +152,6 @@ async def get_server_status(
     """Get the current status of all active server resources."""
     now = datetime.now(timezone.utc)
 
-    # Get all active resources
     resources_result = await db.execute(
         select(ServerResource)
         .where(ServerResource.is_active.is_(True))
@@ -136,63 +161,55 @@ async def get_server_status(
 
     statuses = []
     for resource in resources:
-        # Current reservation (now is between start and end)
+        # 현재 진행 중인 instance
         current_result = await db.execute(
-            select(Reservation)
-            .options(selectinload(Reservation.user))
+            select(ReservationInstance)
+            .join(Reservation, Reservation.id == ReservationInstance.reservation_id)
+            .options(selectinload(ReservationInstance.reservation).selectinload(Reservation.user))
             .where(
-                Reservation.server_resource_id == resource.id,
-                Reservation.status == ReservationStatus.ACTIVE,
-                Reservation.start_at <= now,
-                Reservation.end_at > now,
+                ReservationInstance.server_resource_id == resource.id,
+                ReservationInstance.status == ReservationStatus.ACTIVE,
+                ReservationInstance.start_at <= now,
+                ReservationInstance.end_at > now,
             )
             .limit(1)
         )
-        current_reservation = current_result.scalar_one_or_none()
+        current_inst = current_result.scalar_one_or_none()
 
-        # Next upcoming reservation
+        # 다음 예정된 instance
         next_result = await db.execute(
-            select(Reservation)
-            .options(selectinload(Reservation.user))
+            select(ReservationInstance)
+            .join(Reservation, Reservation.id == ReservationInstance.reservation_id)
+            .options(selectinload(ReservationInstance.reservation).selectinload(Reservation.user))
             .where(
-                Reservation.server_resource_id == resource.id,
-                Reservation.status == ReservationStatus.ACTIVE,
-                Reservation.start_at > now,
+                ReservationInstance.server_resource_id == resource.id,
+                ReservationInstance.status == ReservationStatus.ACTIVE,
+                ReservationInstance.start_at > now,
             )
-            .order_by(Reservation.start_at)
+            .order_by(ReservationInstance.start_at)
             .limit(1)
         )
-        next_reservation = next_result.scalar_one_or_none()
+        next_inst = next_result.scalar_one_or_none()
 
-        # Determine status
-        if current_reservation:
+        if current_inst:
             current_status = "in_use"
-        elif next_reservation:
+        elif next_inst:
             current_status = "reserved"
         else:
             current_status = "available"
 
-        def _to_timeline(r: Reservation | None) -> TimelineReservation | None:
-            if r is None:
+        def _to_timeline(inst: ReservationInstance | None) -> TimelineReservation | None:
+            if inst is None:
                 return None
-            return TimelineReservation(
-                id=r.id,
-                title=r.title,
-                user_name=r.user.name if r.user else "Unknown",
-                user_id=r.user_id,
-                account_name=r.account_name,
-                start_at=r.start_at,
-                end_at=r.end_at,
-                is_mine=r.user_id == current_user.id,
-            )
+            return _instance_to_timeline(inst.reservation, inst, current_user.id)
 
         statuses.append(
             ResourceStatus(
                 id=resource.id,
                 name=resource.name,
                 current_status=current_status,
-                current_reservation=_to_timeline(current_reservation),
-                next_reservation=_to_timeline(next_reservation),
+                current_reservation=_to_timeline(current_inst),
+                next_reservation=_to_timeline(next_inst),
             )
         )
 
@@ -207,7 +224,7 @@ async def get_gpu_health(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get GPU usage (vRAM, utilization, temperature, processes, recent serve cases) for active servers with SSH."""
+    """Get GPU usage for active servers with SSH."""
     conditions = [
         ServerResource.is_active.is_(True),
         ServerResource.host.isnot(None),
@@ -248,7 +265,6 @@ async def get_gpu_health(
         .order_by(ServeCase.created_at.desc())
     )
     all_cases = list(cases_result.scalars().all())
-    # 서버별 최대 5건
     cases_by_server: dict[uuid.UUID, list[ServeCase]] = {}
     for c in all_cases:
         if c.server_resource_id not in cases_by_server:
