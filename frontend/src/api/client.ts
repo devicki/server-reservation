@@ -187,6 +187,32 @@ export const recurringReservationsAPI = {
     recurrence: RecurrenceSpec;
     recurrence_end_date?: string | null;
   }) => api.post('/reservations/recurring/', data),
+
+  /** 이 일정만 수정 */
+  updateInstance: (instanceId: string, data: {
+    title?: string;
+    description?: string;
+    account_name?: string;
+    start_at?: string;
+    end_at?: string;
+  }) => api.put(`/reservations/recurring/instances/${instanceId}`, data),
+
+  /** 이 일정부터 이후 모두 수정 */
+  updateFrom: (instanceId: string, data: {
+    title?: string;
+    description?: string;
+    account_name?: string;
+    start_time?: string;  // "HH:MM"
+    end_time?: string;    // "HH:MM"
+  }) => api.put(`/reservations/recurring/instances/${instanceId}/from`, data),
+
+  /** 이 일정만 취소 */
+  cancelInstance: (instanceId: string) =>
+    api.delete(`/reservations/recurring/instances/${instanceId}`),
+
+  /** 이 일정부터 이후 모두 취소 */
+  cancelFrom: (instanceId: string) =>
+    api.delete(`/reservations/recurring/instances/${instanceId}/from`),
 };
 
 // ─── Feedback (시스템 개선 의견) ─────────────────────────────

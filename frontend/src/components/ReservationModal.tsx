@@ -14,6 +14,7 @@ const WEEKDAYS = [
 
 type WeekdayKey = (typeof WEEKDAYS)[number]["key"];
 type FreqType = "DAILY" | "WEEKLY" | "MONTHLY";
+type RecurringEditScope = "this" | "from";
 
 // ─── 타입 ────────────────────────────────────────────────
 interface Resource {
@@ -27,6 +28,7 @@ interface Props {
   initialStart: string;
   initialEnd: string;
   reservationId?: string | null;
+  instanceId?: string | null;        // 반복 예약의 클릭된 instance ID
   maxReservationHours?: number;
   onClose: () => void;
   onCreated: () => void;
@@ -83,6 +85,7 @@ export default function ReservationModal({
   initialStart,
   initialEnd,
   reservationId,
+  instanceId,
   maxReservationHours,
   onClose,
   onCreated,
@@ -102,6 +105,10 @@ export default function ReservationModal({
   const [loading, setLoading] = useState(false);
   const [loadingReservation, setLoadingReservation] = useState(isEdit);
   const [isPastReservation, setIsPastReservation] = useState(false);
+  const [isRecurringReservation, setIsRecurringReservation] = useState(false); // 편집 대상이 반복 예약인지
+
+  // ─── 반복 예약 삭제 확인 다이얼로그 ────────────────────
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // ─── 예약 타입 토글 ────────────────────────────────────
   const [isRecurring, setIsRecurring] = useState(false);
@@ -111,7 +118,6 @@ export default function ReservationModal({
   const [endAt, setEndAt] = useState(toLocalDatetime(initialEnd));
 
   // ─── 반복 예약 필드 ─────────────────────────────────────
-  // 시작 시각 (HH:MM) — 날짜와 분리해서 관리
   const [recurStartDate, setRecurStartDate] = useState(
     initialStart ? toLocalDatetime(initialStart).slice(0, 10) : new Date().toISOString().slice(0, 10),
   );
@@ -122,6 +128,13 @@ export default function ReservationModal({
   const [selectedDays, setSelectedDays] = useState<Set<WeekdayKey>>(new Set(["MON"]));
   const [byMonthDay, setByMonthDay] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(addMonthsToToday(3));
+
+  // ─── 반복 예약 수정 범위 ────────────────────────────────
+  const [recurringEditScope, setRecurringEditScope] = useState<RecurringEditScope>("this");
+  // "이후 모두" 수정 시 시간 변경 여부
+  const [changeTime, setChangeTime] = useState(false);
+  const [fromStartTime, setFromStartTime] = useState("09:00");
+  const [fromEndTime, setFromEndTime] = useState("18:00");
 
   // ─── 편집 모드: 예약 정보 로드 ──────────────────────────
   useEffect(() => {
@@ -136,10 +149,18 @@ export default function ReservationModal({
         setTitle(r.title);
         setDescription(r.description ?? "");
         setSelectedAccount(r.account_name ?? "");
+        // 반복 예약 여부 감지 (instances가 2개 이상이면 반복 예약)
+        const recurring = Array.isArray(r.instances) && r.instances.length > 1;
+        setIsRecurringReservation(recurring);
         if (r.start_at) {
           setStartAt(toLocalDatetime(r.start_at));
           setEndAt(toLocalDatetime(r.end_at));
           setIsPastReservation(new Date(r.end_at) <= new Date());
+          // 반복 예약 수정 시 기본 시각 초기화
+          if (recurring) {
+            setFromStartTime(extractTime(toLocalDatetime(r.start_at)));
+            setFromEndTime(extractTime(toLocalDatetime(r.end_at)));
+          }
         }
       } catch {
         if (!cancelled) setError("예약 정보를 불러오지 못했습니다.");
@@ -230,13 +251,46 @@ export default function ReservationModal({
     setLoading(true);
     try {
       if (isEdit && reservationId) {
-        await reservationsAPI.update(reservationId, {
-          title,
-          description: description || undefined,
-          account_name: selectedAccount,
-          start_at: new Date(startAt).toISOString(),
-          end_at: new Date(endAt).toISOString(),
-        });
+        if (isRecurringReservation && instanceId) {
+          // ── 반복 예약 수정 ──
+          if (recurringEditScope === "this") {
+            await recurringReservationsAPI.updateInstance(instanceId, {
+              title,
+              description: description || undefined,
+              account_name: selectedAccount,
+              start_at: new Date(startAt).toISOString(),
+              end_at: new Date(endAt).toISOString(),
+            });
+          } else {
+            // start_time, end_time을 로컬 HH:MM → UTC HH:MM으로 변환
+            const toUtcHHMM = (localHHMM: string, refDatetimeLocal: string): string => {
+              // 기준 날짜(로컬) + 로컬 시각으로 Date 객체 생성 후 UTC HH:MM 추출
+              const refDate = refDatetimeLocal ? refDatetimeLocal.slice(0, 10) : new Date().toISOString().slice(0, 10);
+              const d = new Date(`${refDate}T${localHHMM}:00`);
+              const hh = String(d.getUTCHours()).padStart(2, "0");
+              const mm = String(d.getUTCMinutes()).padStart(2, "0");
+              return `${hh}:${mm}`;
+            };
+            // startAt은 로딩된 예약의 시작 시각 (datetime-local 형식)
+            const refDt = startAt || new Date().toISOString().slice(0, 16);
+            await recurringReservationsAPI.updateFrom(instanceId, {
+              title,
+              description: description || undefined,
+              account_name: selectedAccount,
+              start_time: changeTime ? toUtcHHMM(fromStartTime, refDt) : undefined,
+              end_time: changeTime ? toUtcHHMM(fromEndTime, refDt) : undefined,
+            });
+          }
+        } else {
+          // ── 단일 예약 수정 ──
+          await reservationsAPI.update(reservationId, {
+            title,
+            description: description || undefined,
+            account_name: selectedAccount,
+            start_at: new Date(startAt).toISOString(),
+            end_at: new Date(endAt).toISOString(),
+          });
+        }
         onUpdated?.();
       } else if (isRecurring) {
         // ── 반복 예약 생성 ──
@@ -287,11 +341,36 @@ export default function ReservationModal({
   };
 
   const handleDelete = async () => {
+    if (isRecurringReservation) {
+      // 반복 예약 → 범위 선택 다이얼로그 표시
+      setDeleteConfirmOpen(true);
+      return;
+    }
     if (!reservationId || !window.confirm("이 예약을 삭제(취소)하시겠습니까?")) return;
     setError("");
     setLoading(true);
     try {
       await reservationsAPI.cancel(reservationId);
+      onDeleted?.();
+    } catch (err: any) {
+      const raw = err.response?.data?.detail;
+      setError(typeof raw === "string" ? raw : "삭제에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecurringDelete = async (scope: "this" | "from") => {
+    if (!instanceId) return;
+    setDeleteConfirmOpen(false);
+    setError("");
+    setLoading(true);
+    try {
+      if (scope === "this") {
+        await recurringReservationsAPI.cancelInstance(instanceId);
+      } else {
+        await recurringReservationsAPI.cancelFrom(instanceId);
+      }
       onDeleted?.();
     } catch (err: any) {
       const raw = err.response?.data?.detail;
@@ -312,7 +391,7 @@ export default function ReservationModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{isEdit ? "예약 수정" : "새 예약"}</h2>
+          <h2>{isEdit ? (isRecurringReservation ? "반복 예약 수정" : "예약 수정") : "새 예약"}</h2>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
 
@@ -344,6 +423,29 @@ export default function ReservationModal({
                 >
                   반복 예약
                 </button>
+              </div>
+            )}
+
+            {/* 반복 예약 수정 범위 선택 — 편집 모드이고 반복 예약일 때만 표시 */}
+            {isEdit && isRecurringReservation && (
+              <div className="recurring-edit-scope">
+                <p className="recurring-edit-scope-label">🔁 반복 예약 — 수정 범위를 선택하세요</p>
+                <div className="reservation-type-toggle">
+                  <button
+                    type="button"
+                    className={`type-toggle-btn${recurringEditScope === "this" ? " active" : ""}`}
+                    onClick={() => setRecurringEditScope("this")}
+                  >
+                    이 일정만
+                  </button>
+                  <button
+                    type="button"
+                    className={`type-toggle-btn${recurringEditScope === "from" ? " active" : ""}`}
+                    onClick={() => setRecurringEditScope("from")}
+                  >
+                    이 일정부터 이후 모두
+                  </button>
+                </div>
               </div>
             )}
 
@@ -412,7 +514,7 @@ export default function ReservationModal({
                 {/* ════════════════════════════════════
                     단일 예약 시간 입력
                 ════════════════════════════════════ */}
-                {(!isRecurring || isEdit) && (
+                {(!isRecurring || isEdit) && !(isEdit && isRecurringReservation && recurringEditScope === "from") && (
                   <>
                     <div className="form-row">
                       <div className="form-group">
@@ -447,6 +549,49 @@ export default function ReservationModal({
                       </p>
                     )}
                   </>
+                )}
+
+                {/* ════════════════════════════════════
+                    이후 모두 수정: 시간 변경 옵션
+                ════════════════════════════════════ */}
+                {isEdit && isRecurringReservation && recurringEditScope === "from" && (
+                  <div className="recurrence-panel">
+                    <div className="form-group">
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                          type="checkbox"
+                          checked={changeTime}
+                          onChange={(e) => setChangeTime(e.target.checked)}
+                          style={{ width: "auto", margin: 0 }}
+                        />
+                        이후 일정 시각도 변경
+                      </label>
+                    </div>
+                    {changeTime && (
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>시작 시각</label>
+                          <input
+                            type="time"
+                            value={fromStartTime}
+                            onChange={(e) => setFromStartTime(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>종료 시각 <span className="form-hint-inline">(당일 내)</span></label>
+                          <input
+                            type="time"
+                            value={fromEndTime}
+                            min={addMinutesToTime(fromStartTime, 1)}
+                            max="23:59"
+                            onChange={(e) => setFromEndTime(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* ════════════════════════════════════
@@ -636,6 +781,43 @@ export default function ReservationModal({
           </>
         )}
       </div>
+
+      {/* 반복 예약 삭제 범위 선택 다이얼로그 */}
+      {deleteConfirmOpen && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirmOpen(false)}>
+          <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>반복 예약 삭제</h2>
+              <button className="modal-close" onClick={() => setDeleteConfirmOpen(false)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p className="confirm-desc">삭제할 범위를 선택하세요.</p>
+            </div>
+            <div className="modal-actions modal-actions--column">
+              <button
+                className="btn btn-danger"
+                onClick={() => handleRecurringDelete("this")}
+                disabled={loading}
+              >
+                이 일정만 삭제
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleRecurringDelete("from")}
+                disabled={loading}
+              >
+                이 일정부터 이후 모두 삭제
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setDeleteConfirmOpen(false)}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

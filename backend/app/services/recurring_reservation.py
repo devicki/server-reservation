@@ -15,7 +15,7 @@ from typing import Literal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, ForbiddenError
 from app.models.recurrence_rule import RecurrenceRule
 from app.models.reservation import Reservation, ReservationStatus
 from app.models.reservation_instance import ReservationInstance
@@ -320,7 +320,7 @@ class RecurringReservationService:
         return reservation, instances
 
     # ------------------------------------------------------------------ #
-    # 특정 instance 수정 (예외 날짜 처리)
+    # 특정 instance 수정 (이 일정만)
     # ------------------------------------------------------------------ #
     @staticmethod
     async def update_instance(
@@ -329,10 +329,13 @@ class RecurringReservationService:
         current_user: User,
         start_at: datetime | None = None,
         end_at: datetime | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        account_name: str | None = None,
         status: ReservationStatus | None = None,
     ) -> ReservationInstance:
         """
-        단일 instance 수정.
+        단일 instance 수정 (이 일정만).
         반복 예약의 특정 날짜만 예외 처리할 때 사용한다.
         """
         result = await db.execute(
@@ -350,7 +353,6 @@ class RecurringReservationService:
         if reservation is None:
             raise NotFoundError("Reservation not found")
         if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-            from app.core.exceptions import ForbiddenError
             raise ForbiddenError("자신의 예약만 수정할 수 있습니다")
 
         new_start = start_at or instance.start_at
@@ -365,6 +367,14 @@ class RecurringReservationService:
         if status is not None:
             instance.status = status
 
+        # 메타데이터 수정 시 부모 Reservation에 반영
+        if title is not None:
+            reservation.title = title
+        if description is not None:
+            reservation.description = description
+        if account_name is not None:
+            reservation.account_name = account_name
+
         try:
             await db.commit()
             await db.refresh(instance)
@@ -375,7 +385,224 @@ class RecurringReservationService:
         return instance
 
     # ------------------------------------------------------------------ #
-    # 반복 예약 전체 취소
+    # 반복 예약 메타 + 이후 instance 일괄 수정
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    async def update_from(
+        db: AsyncSession,
+        instance_id: uuid.UUID,
+        current_user: User,
+        title: str | None = None,
+        description: str | None = None,
+        account_name: str | None = None,
+        start_time_hhmm: str | None = None,  # "HH:MM"
+        end_time_hhmm: str | None = None,    # "HH:MM"
+    ) -> tuple[Reservation, int]:
+        """
+        이 일정부터 이후 모든 instance 수정.
+
+        - 제목/설명/계정: Reservation 공통 필드 업데이트
+        - 시작/종료 시각(시:분): 해당 instance 이후의 모든 ACTIVE instance 시간대 변경
+          (날짜는 유지, 시각만 교체)
+
+        Returns:
+            (Reservation, 수정된 instance 수)
+        """
+        inst_result = await db.execute(
+            select(ReservationInstance).where(ReservationInstance.id == instance_id)
+        )
+        instance = inst_result.scalar_one_or_none()
+        if instance is None:
+            raise NotFoundError("ReservationInstance not found")
+
+        rsv_result = await db.execute(
+            select(Reservation).where(Reservation.id == instance.reservation_id)
+        )
+        reservation = rsv_result.scalar_one_or_none()
+        if reservation is None:
+            raise NotFoundError("Reservation not found")
+        if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+            raise ForbiddenError("자신의 예약만 수정할 수 있습니다")
+
+        # 메타데이터 업데이트
+        if title is not None:
+            reservation.title = title
+        if description is not None:
+            reservation.description = description
+        if account_name is not None:
+            reservation.account_name = account_name
+
+        # 이후 ACTIVE instance 목록 조회 (기준 instance 포함)
+        future_result = await db.execute(
+            select(ReservationInstance).where(
+                ReservationInstance.reservation_id == instance.reservation_id,
+                ReservationInstance.status == ReservationStatus.ACTIVE,
+                ReservationInstance.start_at >= instance.start_at,
+            )
+        )
+        future_instances = list(future_result.scalars().all())
+
+        updated_count = 0
+        if start_time_hhmm or end_time_hhmm:
+            for inst in future_instances:
+                # start_at 기준으로 시각 교체 (날짜는 start_at의 날짜 유지)
+                if start_time_hhmm:
+                    h, m = map(int, start_time_hhmm.split(":"))
+                    new_start = inst.start_at.replace(hour=h, minute=m, second=0, microsecond=0)
+                else:
+                    new_start = inst.start_at
+
+                # end_at은 start_at과 같은 날짜 기준으로 적용
+                # (기존 예약이 자정을 넘는 경우에도 항상 start 날짜 기준으로 end 계산)
+                if end_time_hhmm:
+                    h, m = map(int, end_time_hhmm.split(":"))
+                    new_end = new_start.replace(hour=h, minute=m, second=0, microsecond=0)
+                    # end가 start보다 앞서면 다음날로 넘김 (자정 이후 종료 허용)
+                    if new_end <= new_start:
+                        new_end = new_end + timedelta(days=1)
+                else:
+                    # end_time 미지정 시 기존 duration 유지
+                    original_duration = inst.end_at - inst.start_at
+                    new_end = new_start + original_duration
+
+                if new_end <= new_start:
+                    raise BadRequestError("end_at은 start_at 이후여야 합니다")
+                inst.start_at = new_start
+                inst.end_at = new_end
+                updated_count += 1
+
+        try:
+            await db.commit()
+            await db.refresh(reservation)
+        except IntegrityError as exc:
+            await db.rollback()
+            _raise_conflict_from_integrity_error(exc)
+
+        return reservation, updated_count
+
+    # ------------------------------------------------------------------ #
+    # 반복 예약 취소 (instance 기반)
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    async def _get_instance_with_reservation(
+        db: AsyncSession,
+        instance_id: uuid.UUID,
+        current_user: User,
+    ) -> tuple[ReservationInstance, Reservation]:
+        """instance와 부모 reservation을 조회하고 권한을 검사한다."""
+        inst_result = await db.execute(
+            select(ReservationInstance).where(ReservationInstance.id == instance_id)
+        )
+        instance = inst_result.scalar_one_or_none()
+        if instance is None:
+            raise NotFoundError("ReservationInstance not found")
+
+        rsv_result = await db.execute(
+            select(Reservation).where(Reservation.id == instance.reservation_id)
+        )
+        reservation = rsv_result.scalar_one_or_none()
+        if reservation is None:
+            raise NotFoundError("Reservation not found")
+        if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+            raise ForbiddenError("자신의 예약만 취소할 수 있습니다")
+
+        return instance, reservation
+
+    @staticmethod
+    async def _cancel_reservation_if_all_done(
+        db: AsyncSession, reservation: Reservation
+    ) -> None:
+        """모든 instance가 ACTIVE가 아니면 reservation도 CANCELED로 전환."""
+        remaining = await db.execute(
+            select(ReservationInstance).where(
+                ReservationInstance.reservation_id == reservation.id,
+                ReservationInstance.status == ReservationStatus.ACTIVE,
+            )
+        )
+        if not remaining.scalars().first():
+            reservation.status = ReservationStatus.CANCELED
+
+    @staticmethod
+    async def cancel_instance(
+        db: AsyncSession,
+        instance_id: uuid.UUID,
+        current_user: User,
+    ) -> tuple[ReservationInstance, Reservation]:
+        """
+        이 일정만 취소.
+
+        - 해당 instance를 CANCELED 처리.
+        - 남은 ACTIVE instance가 없으면 부모 reservation도 CANCELED 처리.
+
+        Returns:
+            (취소된 instance, 부모 reservation)
+        """
+        instance, reservation = await RecurringReservationService._get_instance_with_reservation(
+            db, instance_id, current_user
+        )
+
+        if instance.status == ReservationStatus.CANCELED:
+            raise ConflictError("이미 취소된 일정입니다")
+        if instance.end_at < datetime.now(timezone.utc):
+            raise ForbiddenError("과거 일정은 취소할 수 없습니다")
+
+        instance.status = ReservationStatus.CANCELED
+        await RecurringReservationService._cancel_reservation_if_all_done(db, reservation)
+
+        await db.commit()
+        await db.refresh(instance)
+        await db.refresh(reservation)
+
+        logger.info(
+            f"반복 예약 단건 취소: instance={instance_id}, reservation={reservation.id}"
+        )
+        return instance, reservation
+
+    @staticmethod
+    async def cancel_from(
+        db: AsyncSession,
+        instance_id: uuid.UUID,
+        current_user: User,
+    ) -> tuple[Reservation, int]:
+        """
+        이 일정부터 이후 모든 instance 취소.
+
+        - 기준 instance의 start_at 이후(기준 포함) ACTIVE instance를 모두 CANCELED 처리.
+        - 남은 ACTIVE instance가 없으면 부모 reservation도 CANCELED 처리.
+
+        Returns:
+            (부모 reservation, 취소된 instance 수)
+        """
+        instance, reservation = await RecurringReservationService._get_instance_with_reservation(
+            db, instance_id, current_user
+        )
+
+        future_result = await db.execute(
+            select(ReservationInstance).where(
+                ReservationInstance.reservation_id == instance.reservation_id,
+                ReservationInstance.status == ReservationStatus.ACTIVE,
+                ReservationInstance.start_at >= instance.start_at,
+            )
+        )
+        future_instances = list(future_result.scalars().all())
+
+        for inst in future_instances:
+            inst.status = ReservationStatus.CANCELED
+
+        await RecurringReservationService._cancel_reservation_if_all_done(db, reservation)
+
+        await db.commit()
+        await db.refresh(reservation)
+
+        logger.info(
+            f"반복 예약 이후 전체 취소: from_instance={instance_id}, "
+            f"reservation={reservation.id}, 취소된 instances={len(future_instances)}"
+        )
+        return reservation, len(future_instances)
+
+    # ------------------------------------------------------------------ #
+    # 반복 예약 전체 취소 (reservation_id 기반, 하위 호환)
     # ------------------------------------------------------------------ #
     @staticmethod
     async def cancel_recurring(
@@ -400,7 +627,6 @@ class RecurringReservationService:
         if reservation is None:
             raise NotFoundError("Reservation not found")
         if reservation.user_id != current_user.id and current_user.role != UserRole.ADMIN:
-            from app.core.exceptions import ForbiddenError
             raise ForbiddenError("자신의 예약만 취소할 수 있습니다")
 
         instance_query = select(ReservationInstance).where(

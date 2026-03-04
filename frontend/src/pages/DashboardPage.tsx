@@ -27,6 +27,7 @@ interface CalendarEvent {
   borderColor?: string;
   extendedProps: {
     reservation_id: string;
+    instance_id: string;
     user_name: string;
     user_id: string;
     resource_name: string;
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [selectedDates, setSelectedDates] = useState<{ start: string; end: string } | null>(null);
   const [selectedResource, setSelectedResource] = useState<string>('');
   const [editReservationId, setEditReservationId] = useState<string | null>(null);
+  const [editInstanceId, setEditInstanceId] = useState<string | null>(null);
   const [maxReservationHours, setMaxReservationHours] = useState<number | null>(null);
   const dateRangeRef = useRef({ startStr: '', endStr: '' });
 
@@ -94,6 +96,7 @@ export default function DashboardPage() {
             borderColor: isCompleted ? undefined : color,
             extendedProps: {
               reservation_id: r.reservation_id,  // 수정/삭제용 reservation ID
+              instance_id: r.id,                 // 반복 예약 instance 수정용 ID
               user_name: r.user_name,
               user_id: r.user_id,
               resource_name: resource.name,
@@ -131,6 +134,7 @@ export default function DashboardPage() {
 
   const handleEventClick = async (clickInfo: any) => {
     const reservationId = clickInfo.event.extendedProps?.reservation_id ?? clickInfo.event.id;
+    const instanceId = clickInfo.event.extendedProps?.instance_id ?? clickInfo.event.id;
     const isMine = clickInfo.event.extendedProps?.is_mine === true;
     const isAdmin = user?.role === 'admin';
     const status = clickInfo.event.extendedProps?.status as string | undefined;
@@ -150,6 +154,7 @@ export default function DashboardPage() {
     if (isMine || isAdmin) {
       setSelectedDates(null);
       setEditReservationId(reservationId);
+      setEditInstanceId(instanceId);
       setModalOpen(true);
       return;
     }
@@ -158,6 +163,7 @@ export default function DashboardPage() {
   const handleReservationCreated = () => {
     setModalOpen(false);
     setEditReservationId(null);
+    setEditInstanceId(null);
     setEvents([...events]);
     window.location.reload();
   };
@@ -165,6 +171,7 @@ export default function DashboardPage() {
   const handleReservationUpdatedOrDeleted = () => {
     setModalOpen(false);
     setEditReservationId(null);
+    setEditInstanceId(null);
     const { startStr, endStr } = dateRangeRef.current;
     if (startStr && endStr) fetchTimeline(startStr, endStr);
   };
@@ -281,10 +288,12 @@ export default function DashboardPage() {
           initialStart={selectedDates?.start ?? ''}
           initialEnd={selectedDates?.end ?? ''}
           reservationId={editReservationId}
+          instanceId={editInstanceId}
           maxReservationHours={maxReservationHours ?? undefined}
           onClose={() => {
             setModalOpen(false);
             setEditReservationId(null);
+            setEditInstanceId(null);
           }}
           onCreated={handleReservationCreated}
           onUpdated={handleReservationUpdatedOrDeleted}

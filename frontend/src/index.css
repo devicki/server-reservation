@@ -491,6 +491,22 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+.modal--confirm {
+  max-width: 360px;
+  max-height: unset;
+}
+
+.modal--confirm .modal-body {
+  padding-bottom: 0;
+  overflow: visible;
+}
+
+.modal--confirm .confirm-desc {
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 .modal-form {
   display: flex;
   flex-direction: column;
@@ -544,6 +560,16 @@ body {
   flex-shrink: 0;
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
+}
+
+.modal-actions--column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.modal-actions--column .btn {
+  width: 100%;
+  justify-content: center;
 }
 
 .modal-actions .btn {
@@ -1094,6 +1120,25 @@ body {
 .type-toggle-btn.active {
   background: var(--color-primary);
   color: white;
+}
+
+.recurring-edit-scope {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-radius: var(--radius);
+}
+
+.recurring-edit-scope-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0 0 0.625rem 0;
+}
+
+.recurring-edit-scope .reservation-type-toggle {
+  margin-bottom: 0;
 }
 
 .type-toggle-btn:hover:not(.active) {
